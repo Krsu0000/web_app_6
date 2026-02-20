@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>플래너 — 블럭 식스</title>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#e8500a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="6Block">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/planner.css">
   <link rel="stylesheet" href="css/mobile.css">
@@ -680,6 +688,17 @@ function boot() {
   renderTitle();
   renderBlocks();
   renderFooter();
+}
+</script>
+
+<!-- Service Worker 등록 -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/web_app_6/sw.js', { scope: '/web_app_6/' })
+      .then(reg => console.log('[SW] 등록 성공:', reg.scope))
+      .catch(err => console.warn('[SW] 등록 실패:', err));
+  });
 }
 </script>
 </body>

@@ -1,0 +1,41 @@
+{
+  "name": "블럭 식스 플래너",
+  "short_name": "6Block",
+  "description": "6개의 타임블럭으로 하루를 설계하는 플래너",
+  "start_url": "/web_app_6/index.html",
+  "scope": "/web_app_6/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5f5",
+  "theme_color": "#e8500a",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "오늘 플래너",
+      "short_name": "오늘",
+      "url": "/web_app_6/planner.html",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "이번 주 플래너",
+      "short_name": "이번 주",
+      "url": "/web_app_6/week.html",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["productivity", "lifestyle"]
+}

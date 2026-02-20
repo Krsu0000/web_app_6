@@ -5,5 +5,7 @@
 .DS_Store
 Thumbs.db
 
-# 참고용 이미지 (배포 불필요)
+# 참고용 이미지 (배포 불필요) — assets/ 아이콘은 PWA에 필요하므로 제외
 *.png
+!assets/icon-192.png
+!assets/icon-512.png
