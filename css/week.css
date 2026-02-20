@@ -1,0 +1,482 @@
+/* ════════════════════════════════════════════════════
+   주간 플래너 레이아웃
+════════════════════════════════════════════════════ */
+.week-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  /* 좌우 패딩을 줄여서 그리드가 더 넓게 쓸 수 있게 */
+  padding: 16px 8px 60px;
+}
+
+/* ── 헤더 ── */
+.week-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  padding: 0 8px;
+}
+
+/* ── 카드 공통 ── */
+.week-card {
+  background: var(--surface);
+  border-radius: 10px;
+  border: 1.5px solid var(--border-strong);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+
+/* ════════════════════════════════════════════════════
+   영역 1: 6×7 메인 그리드
+   핵심: overflow 없음, 모든 열이 화면 너비에 비례해 축소
+════════════════════════════════════════════════════ */
+#week-grid-wrap {
+  /* overflow 제거 → 가로 스크롤 없이 비율 유지 */
+  overflow: visible;
+  width: 100%;
+}
+
+/* 헤더 행 & 블럭 행 공통 그리드: 번호셀 + 7일
+   - min-width 제거 → 화면 너비에 따라 자유롭게 축소
+   - 번호셀: 6.5% 고정 비율, 나머지 7열이 균등 분할 */
+.week-grid-header,
+.week-grid-row {
+  display: grid;
+  grid-template-columns: 6.5% repeat(7, 1fr);
+  width: 100%;
+}
+
+/* ── 헤더 행 ── */
+.week-grid-header {
+  background: var(--border-strong);
+  color: #fff;
+  border-bottom: 2px solid var(--border-strong);
+}
+
+/* 코너 셀 (Day\Block 대각선 효과) */
+.week-corner {
+  position: relative;
+  border-right: 1px solid rgba(255,255,255,0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3px 4px;
+  overflow: hidden;
+  min-height: 36px;
+}
+.week-corner::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border-bottom: 1px solid rgba(255,255,255,0.35);
+  transform: rotate(-35deg) scaleX(1.5);
+  transform-origin: bottom left;
+  pointer-events: none;
+}
+.corner-day {
+  font-size: clamp(7px, 1.2vw, 9px);
+  font-weight: 700;
+  text-align: right;
+  letter-spacing: 0.3px;
+  opacity: 0.85;
+}
+.corner-block {
+  font-size: clamp(7px, 1.2vw, 9px);
+  font-weight: 700;
+  text-align: left;
+  letter-spacing: 0.3px;
+  opacity: 0.85;
+}
+
+.week-day-header {
+  text-align: center;
+  padding: 5px 2px;
+  border-right: 1px solid rgba(255,255,255,0.2);
+  /* 화면 너비에 따라 폰트 크기 자동 조정 */
+  font-size: clamp(8px, 1.4vw, 11px);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.week-day-header:last-child { border-right: none; }
+.week-day-header.is-today {
+  background: var(--accent);
+}
+
+/* ── 블럭 행 ── */
+.week-grid-row {
+  border-bottom: 1px solid var(--border);
+  /* 행 높이도 뷰포트에 비례 */
+  min-height: clamp(44px, 8vw, 80px);
+}
+.week-grid-row:last-child { border-bottom: none; }
+
+.week-block-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(10px, 1.6vw, 14px);
+  font-weight: 700;
+  color: var(--text-muted);
+  background: #fafafa;
+  border-right: 1.5px solid var(--border-strong);
+}
+
+/* ── 셀 ── */
+.week-cell {
+  border-right: 1px solid var(--border);
+  padding: 0;
+  position: relative;
+  transition: background 0.15s, box-shadow 0.12s;
+  cursor: default;
+  /* min-height를 뷰포트 비율로 */
+  min-height: clamp(44px, 8vw, 80px);
+  display: flex;
+  align-items: stretch;
+}
+.week-cell:last-child { border-right: none; }
+
+.week-cell-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  /* 폰트 크기 자동 축소 */
+  font-size: clamp(9px, 1.5vw, 13px);
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+  padding: clamp(2px, 0.8vw, 6px) 2px;
+}
+.week-cell-input:focus {
+  cursor: text;
+  background: rgba(255,255,255,0.55);
+}
+
+/* 드래그 핸들 */
+.cell-drag-handle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: clamp(9px, 1.3vw, 13px);
+  color: rgba(0,0,0,0.25);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s;
+  line-height: 1;
+  user-select: none;
+  z-index: 3;
+}
+.cell-drag-handle:active { cursor: grabbing; }
+.week-cell:hover .cell-drag-handle { opacity: 1; }
+
+/* 드래그 상태 */
+.week-cell.cell-dragging {
+  opacity: 0.4;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.week-cell.cell-drag-over {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background: rgba(232,80,10,0.06) !important;
+}
+.week-cell.cell-focused {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  z-index: 2;
+}
+
+/* ── Lunch / Dinner 구분선 ── */
+.week-divider {
+  /* grid-column 불필요 — flex 컨테이너가 아닌 독립 div */
+  width: 100%;
+  height: clamp(12px, 2vw, 18px);
+  background: var(--border-strong);
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.week-divider-label {
+  position: absolute;
+  left: 6px;
+  font-size: clamp(7px, 1vw, 9px);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ════════════════════════════════════════════════════
+   하단 영역 (Pre-check + 계산표)
+════════════════════════════════════════════════════ */
+.week-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ════════════════════════════════════════════════════
+   영역 2: Pre-Check List
+════════════════════════════════════════════════════ */
+.pre-check-card {
+  padding: 18px 20px;
+}
+
+.pre-check-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  border-bottom: 2px solid var(--border-strong);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.pre-item {
+  margin-bottom: 10px;
+}
+
+/* 체크박스 + 텍스트 + 입력 필드를 감싸는 행 */
+.pre-check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.pre-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.pre-check-label input[type=checkbox] {
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0;
+}
+.pre-checkmark {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--border);
+  border-radius: 2px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+/* 체크 시 체크마크만 채워짐 — 텍스트 변화 없음 */
+.pre-check-label input:checked + .pre-checkmark {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.pre-check-label input:checked + .pre-checkmark::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 7px;
+  border: 1.5px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg) translate(-1px,-1px);
+}
+
+.pre-text {
+  white-space: nowrap;
+}
+
+/* 인라인 텍스트 입력 필드 */
+.pre-value-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-bottom: 1.5px solid var(--border);
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  padding: 1px 4px;
+  transition: border-color 0.15s;
+}
+.pre-value-input:focus {
+  border-bottom-color: var(--accent);
+}
+.pre-value-input::placeholder {
+  color: #ccc;
+  font-size: 12px;
+}
+
+/* 옵션 버튼 (충분/적당/부족) */
+.pre-options {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.pre-option {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  color: var(--text);
+}
+.pre-option:hover { background: var(--accent-light); border-color: var(--accent); }
+.pre-option.selected {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* 서브 아이템 */
+.pre-subitems {
+  padding-left: 26px;
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pre-subitem-row {
+  /* 서브 아이템도 pre-check-row 레이아웃 사용 */
+}
+.pre-subitem {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ════════════════════════════════════════════════════
+   영역 3: 블럭 계산표 (가용블럭)
+════════════════════════════════════════════════════ */
+.block-calc-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+#block-calc-wrap {
+  min-height: 120px;
+}
+
+.calc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1.5px solid var(--border-strong);
+}
+.calc-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.calc-total {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+/* 서브헤더: 빈셀, 계획, 실천, 빈셀, 계획, 실천 */
+.calc-subheader {
+  display: grid;
+  grid-template-columns: 1fr 36px 36px 1fr 36px 36px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 4px 4px 2px;
+  border-bottom: 1px solid var(--border);
+  background: #fafafa;
+}
+
+/* 테이블 행 */
+.calc-table {
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.calc-row {
+  display: grid;
+  grid-template-columns: 1fr 36px 36px 1fr 36px 36px;
+  gap: 3px;
+  min-height: 30px;
+}
+
+.calc-item {
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(0,0,0,0.06);
+  min-height: 30px;
+}
+.calc-item.empty {
+  background: #f5f5f5;
+  border-color: var(--border);
+}
+.calc-item-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.calc-plan,
+.calc-actual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--text);
+  min-height: 30px;
+}
+.calc-plan { color: var(--accent); }
+
+/* ════════════════════════════════════════════════════
+   인쇄
+════════════════════════════════════════════════════ */
+@media print {
+  .app-header, .back-btn, .save-indicator { display: none; }
+  .week-page { padding: 0; max-width: 100%; }
+  .week-card { box-shadow: none; border-color: #ccc; }
+  .week-bottom { grid-template-columns: 1fr 1fr; }
+  .week-grid-header,
+  .week-grid-row { width: 100%; }
+}
+
+/* ════════════════════════════════════════════════════
+   모바일 (≤768px)
+   clamp()로 대부분 처리됨 — 여기서는 레이아웃 변경만
+════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .week-page { padding: 8px 4px 40px; }
+  .week-header { padding: 0 4px; margin-bottom: 10px; }
+  /* 하단 영역: 세로 배치 */
+  .week-bottom {
+    grid-template-columns: 1fr;
+  }
+  /* 번호셀 비율 더 좁게 */
+  .week-grid-header,
+  .week-grid-row {
+    grid-template-columns: 5% repeat(7, 1fr);
+  }
+  /* pre-check 텍스트 줄바꿈 허용 */
+  .pre-text { white-space: normal; }
+  .pre-check-row { flex-wrap: wrap; }
+}

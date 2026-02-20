@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>블럭 식스 플래너</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/mobile.css">
+  <style>
+    /* ── Auth UI ── */
+    .auth-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .auth-bar .user-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border-strong);
+    }
+    .auth-bar .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .btn-signout {
+      font-size: 12px;
+      padding: 4px 10px;
+      background: none;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .btn-signout:hover { background: #f0f0f0; }
+    .btn-signin {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,.12);
+      transition: box-shadow .15s;
+    }
+    .btn-signin:hover { box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+    .btn-signin svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ── Sync status ── */
+    .sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 16px;
+      background: #fff8e1;
+      border-bottom: 1px solid #ffe082;
+      font-size: 12px;
+      color: #795548;
+    }
+    .sync-bar.synced  { background: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; }
+    .sync-bar.syncing { background: #e3f2fd; border-color: #90caf9; color: #1565c0; }
+    .sync-bar.hidden  { display: none; }
+    .sync-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .sync-bar.syncing .sync-dot { animation: pulse 1s infinite; }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <a href="index.html" class="logo">■6 Block Planner</a>
+    <span class="spacer"></span>
+    <div class="auth-bar" id="auth-bar">
+      <!-- JS로 채워짐 -->
+    </div>
+  </header>
+
+  <div class="sync-bar hidden" id="sync-bar">
+    <span class="sync-dot"></span>
+    <span id="sync-msg">동기화 중...</span>
+  </div>
+
+  <main class="index-container">
+    <div class="index-hero">
+      <h1>내 플래너</h1>
+      <div class="hero-actions">
+        <button id="btn-week" class="btn btn-outline">📅 이번 주 플래너</button>
+        <button id="btn-today" class="btn btn-primary">오늘 플래너 열기</button>
+        <span class="tooltip-wrap">
+          <button id="btn-new" class="btn btn-outline">날짜 선택</button>
+          <span class="tooltip-box">
+            년/월/일을 입력하면 해당 날짜의 플래너를 새로 생성하거나,<br>
+            이미 만들어진 해당 날짜의 플래너로 빠르게 이동할 수 있습니다.
+          </span>
+        </span>
+      </div>
+    </div>
+    <div id="planner-list"></div>
+    <div id="empty-state" class="empty-state" hidden>
+      <div class="empty-icon">📋</div>
+      <p>아직 작성된 플래너가 없습니다.</p>
+      <p class="empty-hint">위의 버튼을 눌러 오늘의 플래너를 시작해보세요!</p>
+    </div>
+  </main>
+
+<!-- Firebase SDK (CDN, ES module compat build) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════
+   FIREBASE INIT
+════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBL20javPCMV_KDmjeGrIHgQvugxuprgMo",
+  authDomain: "cellular-unity-445007-p8.firebaseapp.com",
+  projectId: "cellular-unity-445007-p8",
+  storageBucket: "cellular-unity-445007-p8.firebasestorage.app",
+  messagingSenderId: "986951321974",
+  appId: "1:986951321974:web:29c63d4193ea2b3b8e5257",
+  measurementId: "G-N3CPP8LPPY"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let currentUser = null;
+
+/* ════════════════════════════════════════════════════════════
+   DATE UTILS
+════════════════════════════════════════════════════════════ */
+const DAYS_KO = ['일','월','화','수','목','금','토'];
+
+function todayId() { return toId(new Date()); }
+function toId(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+function fromId(id) {
+  const [y,m,d] = id.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function formatTitle(id) {
+  const date = fromId(id);
+  return `${date.getFullYear()}년 ${date.getMonth()+1}월 ${date.getDate()}일 (${DAYS_KO[date.getDay()]})`;
+}
+function formatShort(id) {
+  const date = fromId(id);
+  return `${date.getMonth()+1}/${date.getDate()} (${DAYS_KO[date.getDay()]})`;
+}
+function formatMonthLabel(id) {
+  const date = fromId(id);
+  return `${date.getFullYear()}년 ${date.getMonth()+1}월`;
+}
+function getWeekMonday(dateId) {
+  const d = fromId(dateId);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diff);
+  return toId(mon);
+}
+function getNthWeekOfMonth(mondayId) {
+  const d = fromId(mondayId);
+  return Math.ceil(d.getDate() / 7);
+}
+function formatWeekTitle(mondayId) {
+  const d = fromId(mondayId);
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${getNthWeekOfMonth(mondayId)}번째 주`;
+}
+function formatWeekShort(mondayId) {
+  const d = fromId(mondayId);
+  return `${d.getMonth()+1}월 ${getNthWeekOfMonth(mondayId)}주차`;
+}
+function formatMonthLabelFromWeek(mondayId) {
+  const d = fromId(mondayId);
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월`;
+}
+
+/* ════════════════════════════════════════════════════════════
+   LOCAL STORAGE
+════════════════════════════════════════════════════════════ */
+const PREFIX      = 'planner_';
+const WEEK_PREFIX = 'week_';
+
+function getPlanner(id)       { const r = localStorage.getItem(PREFIX+id);      return r ? JSON.parse(r) : null; }
+function savePlannerLocal(data){ data.updatedAt = new Date().toISOString(); localStorage.setItem(PREFIX+data.id, JSON.stringify(data)); }
+function deletePlannerLocal(id){ localStorage.removeItem(PREFIX+id); }
+function getWeekPlanner(id)   { const r = localStorage.getItem(WEEK_PREFIX+id); return r ? JSON.parse(r) : null; }
+function saveWeekLocal(data)  { data.updatedAt = new Date().toISOString(); localStorage.setItem(WEEK_PREFIX+data.id, JSON.stringify(data)); }
+function deleteWeekLocal(id)  { localStorage.removeItem(WEEK_PREFIX+id); }
+
+function getAllDailyIds() {
+  const ids = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(PREFIX)) ids.push(key.slice(PREFIX.length));
+  }
+  return ids.sort((a,b) => b.localeCompare(a));
+}
+function getAllWeekIds() {
+  const ids = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(WEEK_PREFIX)) ids.push(key.slice(WEEK_PREFIX.length));
+  }
+  return ids.sort((a,b) => b.localeCompare(a));
+}
+
+/* ════════════════════════════════════════════════════════════
+   FIRESTORE HELPERS
+════════════════════════════════════════════════════════════ */
+function userPlannerRef(uid, id) {
+  return db.collection('users').doc(uid).collection('planners').doc(id);
+}
+function userWeekRef(uid, id) {
+  return db.collection('users').doc(uid).collection('weeks').doc(id);
+}
+
+function setSyncBar(state, msg) {
+  const bar = document.getElementById('sync-bar');
+  const msgEl = document.getElementById('sync-msg');
+  bar.className = 'sync-bar ' + state;
+  msgEl.textContent = msg;
+}
+
+/* Firestore → localStorage 전체 다운로드 */
+async function syncFromCloud() {
+  if (!currentUser) return;
+  setSyncBar('syncing', '클라우드에서 동기화 중...');
+  try {
+    const [planSnap, weekSnap] = await Promise.all([
+      db.collection('users').doc(currentUser.uid).collection('planners').get(),
+      db.collection('users').doc(currentUser.uid).collection('weeks').get()
+    ]);
+    planSnap.forEach(doc => {
+      const data = doc.data();
+      localStorage.setItem(PREFIX + doc.id, JSON.stringify(data));
+    });
+    weekSnap.forEach(doc => {
+      const data = doc.data();
+      localStorage.setItem(WEEK_PREFIX + doc.id, JSON.stringify(data));
+    });
+    setSyncBar('synced', '동기화 완료 ✓');
+    setTimeout(() => setSyncBar('hidden', ''), 2000);
+    renderList();
+  } catch(e) {
+    console.error('syncFromCloud error', e);
+    setSyncBar('hidden', '');
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   AUTH UI
+════════════════════════════════════════════════════════════ */
+function renderAuthBar(user) {
+  const bar = document.getElementById('auth-bar');
+  if (user) {
+    bar.innerHTML = `
+      ${user.photoURL ? `<img class="user-avatar" src="${user.photoURL}" alt="">` : ''}
+      <span class="user-name">${escHtml(user.displayName || user.email || '')}</span>
+      <button class="btn-signout" id="btn-signout">로그아웃</button>
+    `;
+    document.getElementById('btn-signout').addEventListener('click', () => {
+      auth.signOut();
+    });
+  } else {
+    bar.innerHTML = `
+      <button class="btn-signin" id="btn-signin">
+        <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Google로 로그인
+      </button>
+    `;
+    document.getElementById('btn-signin').addEventListener('click', () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(err => {
+        console.error('signIn error', err);
+        alert('로그인에 실패했습니다: ' + err.message);
+      });
+    });
+  }
+}
+
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  renderAuthBar(user);
+  if (user) {
+    syncFromCloud();
+  } else {
+    renderList();
+  }
+});
+
+/* ════════════════════════════════════════════════════════════
+   CREATE HELPERS
+════════════════════════════════════════════════════════════ */
+function defaultPreChecks() {
+  return [
+    { id:1, checked:false, text:'이번 주 CORE BLOCK :', value:'' },
+    { id:2, checked:false, text:'목표를 달성하기 위한 타임블럭 개수 :', value:'' },
+    { id:3, checked:false, text:'목표를 위한 타임블럭 양이', options:['충분','적당','부족'], selectedOption:null },
+    { id:4, checked:false, text:'목표를 위한 타임블럭 양이 부족하다고 생각된다면', value:'',
+      subItems:[
+        { id:41, checked:false, text:'더 비워낼 수 있는 블록은 없나요?', value:'' },
+        { id:42, checked:false, text:'목표 수정이 필요한가요?', value:'' },
+      ]
+    },
+  ];
+}
+function createDailyPlanner(id) {
+  const now = new Date().toISOString();
+  const data = {
+    id, title: formatTitle(id), customTitle: null,
+    blocks: Array.from({length:6}, (_,i) => ({
+      id: i+1, timeLabel:'', checks:[false,false,false], task:'', memo:'',
+      tasks:[{text:'',done:false},{text:'',done:false},{text:'',done:false}]
+    })),
+    dividers: [2, 4],
+    footer: {memo:'', good:'', bad:'', next:''},
+    createdAt: now, updatedAt: now
+  };
+  savePlannerLocal(data);
+  return data;
+}
+function createWeekPlannerData(id) {
+  const now = new Date().toISOString();
+  const data = {
+    id, title: formatWeekTitle(id), customTitle: null, mondayDate: id,
+    cells: Array.from({length:6}, () => Array.from({length:7}, () => ({text:'',color:''}))),
+    preChecks: defaultPreChecks(),
+    createdAt: now, updatedAt: now
+  };
+  saveWeekLocal(data);
+  return data;
+}
+
+/* ════════════════════════════════════════════════════════════
+   APP LOGIC
+════════════════════════════════════════════════════════════ */
+function openPlanner(id)     { window.location.href = `planner.html?date=${id}`; }
+function openWeekPlanner(id) { window.location.href = `week.html?week=${id}`; }
+
+function handleToday() {
+  const id = todayId();
+  if (!getPlanner(id)) createDailyPlanner(id);
+  openPlanner(id);
+}
+function handleThisWeek() {
+  const id = getWeekMonday(todayId());
+  if (!getWeekPlanner(id)) createWeekPlannerData(id);
+  openWeekPlanner(id);
+}
+function handleNew() {
+  const id = todayId();
+  const input = prompt('날짜를 입력하세요 (YYYY-MM-DD)', id);
+  if (!input) return;
+  const trimmed = input.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    alert('날짜 형식이 올바르지 않습니다. (예: 2026-02-20)');
+    return;
+  }
+  if (!getPlanner(trimmed)) createDailyPlanner(trimmed);
+  openPlanner(trimmed);
+}
+
+async function handleDeleteDaily(id) {
+  if (!confirm(`"${formatTitle(id)}" 플래너를 삭제할까요?`)) return;
+  deletePlannerLocal(id);
+  if (currentUser) {
+    try { await userPlannerRef(currentUser.uid, id).delete(); } catch(e) { console.error(e); }
+  }
+  renderList();
+}
+async function handleDeleteWeek(id) {
+  if (!confirm(`"${formatWeekTitle(id)}" 주간 플래너를 삭제할까요?`)) return;
+  deleteWeekLocal(id);
+  if (currentUser) {
+    try { await userWeekRef(currentUser.uid, id).delete(); } catch(e) { console.error(e); }
+  }
+  renderList();
+}
+
+function escHtml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDER LIST
+════════════════════════════════════════════════════════════ */
+function renderList() {
+  const listEl  = document.getElementById('planner-list');
+  const emptyEl = document.getElementById('empty-state');
+  listEl.innerHTML = '';
+
+  const dailyIds  = getAllDailyIds();
+  const weekIds   = getAllWeekIds();
+  const todayStr  = todayId();
+  const thisWeekId = getWeekMonday(todayStr);
+
+  if (dailyIds.length === 0 && weekIds.length === 0) {
+    emptyEl.hidden = false;
+    return;
+  }
+  emptyEl.hidden = true;
+
+  const groups = {};
+  weekIds.forEach(id => {
+    const label = formatMonthLabelFromWeek(id);
+    if (!groups[label]) groups[label] = { weekIds:[], dailyIds:[] };
+    groups[label].weekIds.push(id);
+  });
+  dailyIds.forEach(id => {
+    const label = formatMonthLabel(id);
+    if (!groups[label]) groups[label] = { weekIds:[], dailyIds:[] };
+    groups[label].dailyIds.push(id);
+  });
+
+  const sortedMonths = Object.keys(groups).sort((a,b) => b.localeCompare(a));
+
+  sortedMonths.forEach(month => {
+    const grp = groups[month];
+    const section = document.createElement('section');
+    section.className = 'month-group';
+
+    const h2 = document.createElement('h2');
+    h2.className = 'month-label';
+    h2.textContent = month;
+    section.appendChild(h2);
+
+    grp.weekIds.sort((a,b) => b.localeCompare(a)).forEach(id => {
+      const week = getWeekPlanner(id);
+      const displayTitle = week.customTitle || week.title;
+      const isThisWeek = id === thisWeekId;
+      const item = document.createElement('div');
+      item.className = 'planner-item week-item' + (isThisWeek ? ' is-today' : '');
+      item.innerHTML = `
+        <button class="item-link">
+          <span class="item-type-badge">주간</span>
+          <span class="item-date">${formatWeekShort(id)}</span>
+          <span class="item-title">${escHtml(displayTitle)}</span>
+          ${isThisWeek ? '<span class="badge-today">이번 주</span>' : ''}
+        </button>
+        <button class="item-delete" title="삭제">✕</button>
+      `;
+      item.querySelector('.item-link').addEventListener('click', () => openWeekPlanner(id));
+      item.querySelector('.item-delete').addEventListener('click', () => handleDeleteWeek(id));
+      section.appendChild(item);
+    });
+
+    grp.dailyIds.sort((a,b) => b.localeCompare(a)).forEach(id => {
+      const planner = getPlanner(id);
+      const displayTitle = planner.customTitle || planner.title;
+      const isToday = id === todayStr;
+      const item = document.createElement('div');
+      item.className = 'planner-item' + (isToday ? ' is-today' : '');
+      item.innerHTML = `
+        <button class="item-link">
+          <span class="item-date">${formatShort(id)}</span>
+          <span class="item-title">${escHtml(displayTitle)}</span>
+          ${isToday ? '<span class="badge-today">오늘</span>' : ''}
+        </button>
+        <button class="item-delete" title="삭제">✕</button>
+      `;
+      item.querySelector('.item-link').addEventListener('click', () => openPlanner(id));
+      item.querySelector('.item-delete').addEventListener('click', () => handleDeleteDaily(id));
+      section.appendChild(item);
+    });
+
+    listEl.appendChild(section);
+  });
+}
+
+document.getElementById('btn-today').addEventListener('click', handleToday);
+document.getElementById('btn-week').addEventListener('click', handleThisWeek);
+document.getElementById('btn-new').addEventListener('click', handleNew);
+renderList();
+</script>
+</body>
+</html>

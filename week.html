@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>주간 플래너 — 블럭 식스</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/week.css">
+  <link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <a href="index.html" class="logo">■6 Block Planner</a>
+    <span class="spacer"></span>
+    <button onclick="window.print()" class="btn btn-ghost">🖨 인쇄</button>
+  </header>
+
+  <main class="week-page">
+    <div class="week-header">
+      <button class="back-btn"
+        onclick="history.length>1?history.back():location.href='index.html'"
+        title="목록으로">←</button>
+      <div class="title-wrap">
+        <div class="day-badge" id="week-badge">WEEK</div>
+        <span id="week-title">로딩 중...</span>
+        <input id="week-title-input" type="text" hidden autocomplete="off">
+      </div>
+      <span id="save-indicator" class="save-indicator"></span>
+    </div>
+
+    <!-- 영역 1: 6블럭 × 7일 메인 그리드 -->
+    <div class="week-card">
+      <div id="week-grid-wrap"></div>
+    </div>
+
+    <!-- 하단: Pre-checklist(영역2) + 블럭 계산표(영역3) -->
+    <div class="week-bottom">
+      <!-- 영역 2: Pre-Check List -->
+      <div class="week-card pre-check-card">
+        <div class="pre-check-title">PRE – CHECK LIST</div>
+        <div class="pre-check-list" id="pre-check-list"></div>
+      </div>
+      <!-- 영역 3: 블럭 계산표 -->
+      <div class="week-card block-calc-card">
+        <div id="block-calc-wrap"></div>
+      </div>
+    </div>
+  </main>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════
+   FIREBASE INIT
+════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBL20javPCMV_KDmjeGrIHgQvugxuprgMo",
+  authDomain: "cellular-unity-445007-p8.firebaseapp.com",
+  projectId: "cellular-unity-445007-p8",
+  storageBucket: "cellular-unity-445007-p8.firebasestorage.app",
+  messagingSenderId: "986951321974",
+  appId: "1:986951321974:web:29c63d4193ea2b3b8e5257",
+  measurementId: "G-N3CPP8LPPY"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let currentUser = null;
+
+/* ════════════════════════════════════════════════════════════
+   DATE UTILS
+════════════════════════════════════════════════════════════ */
+const DAYS_KO = ['일','월','화','수','목','금','토'];
+const DAYS_EN = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+
+function todayId() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fromId(id) {
+  const [y,m,d] = id.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function getWeekMonday(dateOrId) {
+  const d = typeof dateOrId === 'string' ? fromId(dateOrId) : new Date(dateOrId);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diff);
+  return toDateId(mon);
+}
+function toDateId(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function weekDates(mondayId) {
+  const mon = fromId(mondayId);
+  return Array.from({length:7}, (_,i) => {
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + i);
+    return toDateId(d);
+  });
+}
+function formatWeekTitle(mondayId) {
+  const d = fromId(mondayId);
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${getNthWeekOfMonth(mondayId)}번째 주`;
+}
+function getNthWeekOfMonth(mondayId) {
+  const d = fromId(mondayId);
+  return Math.ceil(d.getDate() / 7);
+}
+
+/* ════════════════════════════════════════════════════════════
+   COLOR PALETTE
+════════════════════════════════════════════════════════════ */
+const PALETTE = [
+  '#FFD6CC','#FFEACC','#FFF5CC','#D9F0CC','#CCF0EA',
+  '#CCE4F5','#D6CCFF','#F5CCF0','#FCCCD8','#E8E8E8',
+  '#D4EED4','#CCE8FF','#FFE4E1','#E8D5F5','#D5F0E8',
+  '#FFF0CC','#E0F0FF','#FFE0F0',
+];
+const colorMap = {};
+
+function getColorForText(text) {
+  const t = text.trim();
+  if (!t) return '';
+  if (!colorMap[t]) {
+    const usedColors = Object.values(colorMap);
+    const unused = PALETTE.filter(c => !usedColors.includes(c));
+    colorMap[t] = unused.length > 0
+      ? unused[0]
+      : PALETTE[Object.keys(colorMap).length % PALETTE.length];
+  }
+  return colorMap[t];
+}
+
+/* ════════════════════════════════════════════════════════════
+   STORAGE — localStorage + Firestore 듀얼 저장
+════════════════════════════════════════════════════════════ */
+const WEEK_PREFIX = 'week_';
+
+function getWeekLocal(id) {
+  const raw = localStorage.getItem(WEEK_PREFIX + id);
+  return raw ? JSON.parse(raw) : null;
+}
+function saveWeekLocal(data) {
+  data.updatedAt = new Date().toISOString();
+  localStorage.setItem(WEEK_PREFIX + data.id, JSON.stringify(data));
+}
+
+async function saveWeekCloud(data) {
+  if (!currentUser) return;
+  try {
+    await db.collection('users').doc(currentUser.uid)
+            .collection('weeks').doc(data.id)
+            .set(data);
+  } catch(e) {
+    console.error('saveWeekCloud error', e);
+  }
+}
+
+function saveWeekPlanner(data) {
+  saveWeekLocal(data);
+  saveWeekCloud(data); // 비동기, fire-and-forget
+}
+
+/* ════════════════════════════════════════════════════════════
+   DATA MODEL
+════════════════════════════════════════════════════════════ */
+function defaultPreChecks() {
+  return [
+    { id: 1, checked: false, text: '이번 주 CORE BLOCK :',        value: '' },
+    { id: 2, checked: false, text: '목표를 달성하기 위한 타임블럭 개수 :',  value: '' },
+    { id: 3, checked: false, text: '목표를 위한 타임블럭 양이',
+      options: ['충분','적당','부족'], selectedOption: null },
+    { id: 4, checked: false, text: '목표를 위한 타임블럭 양이 부족하다고 생각된다면', value: '',
+      subItems: [
+        { id: 41, checked: false, text: '더 비워낼 수 있는 블록은 없나요?', value: '' },
+        { id: 42, checked: false, text: '목표 수정이 필요한가요?', value: '' },
+      ]
+    },
+  ];
+}
+
+function createWeekPlanner(id) {
+  const now = new Date().toISOString();
+  const data = {
+    id,
+    title: formatWeekTitle(id),
+    customTitle: null,
+    mondayDate: id,
+    cells: Array.from({length:6}, () =>
+      Array.from({length:7}, () => ({ text: '', color: '' }))
+    ),
+    preChecks: defaultPreChecks(),
+    createdAt: now,
+    updatedAt: now
+  };
+  saveWeekPlanner(data);
+  return data;
+}
+
+/* ════════════════════════════════════════════════════════════
+   INIT — Firestore 우선, 없으면 localStorage fallback
+════════════════════════════════════════════════════════════ */
+const params  = new URLSearchParams(location.search);
+const rawWeek = params.get('week');
+const weekId  = rawWeek ? rawWeek : getWeekMonday(todayId());
+
+const titleSpan  = document.getElementById('week-title');
+const titleInput = document.getElementById('week-title-input');
+const weekBadge  = document.getElementById('week-badge');
+const saveInd    = document.getElementById('save-indicator');
+const gridWrap   = document.getElementById('week-grid-wrap');
+const calcWrap   = document.getElementById('block-calc-wrap');
+const preList    = document.getElementById('pre-check-list');
+
+let weekData = null;
+
+async function loadWeekPlanner() {
+  // 1) localStorage 먼저
+  let localData = getWeekLocal(weekId);
+  if (localData) {
+    if (!localData.preChecks || localData.preChecks.length === 0)
+      localData.preChecks = defaultPreChecks();
+    weekData = localData;
+    rebuildColorMap();
+    boot();
+  }
+
+  // 2) 로그인 시 Firestore 최신 데이터로 갱신
+  if (currentUser) {
+    try {
+      const doc = await db.collection('users').doc(currentUser.uid)
+                          .collection('weeks').doc(weekId).get();
+      if (doc.exists) {
+        const cloudData = doc.data();
+        if (!cloudData.preChecks || cloudData.preChecks.length === 0)
+          cloudData.preChecks = defaultPreChecks();
+        const localUpdated = weekData ? new Date(weekData.updatedAt || 0) : new Date(0);
+        const cloudUpdated = new Date(cloudData.updatedAt || 0);
+        if (cloudUpdated > localUpdated) {
+          weekData = cloudData;
+          saveWeekLocal(weekData);
+          rebuildColorMap();
+          boot();
+        }
+      } else if (!localData) {
+        weekData = createWeekPlanner(weekId);
+        rebuildColorMap();
+        boot();
+      }
+    } catch(e) {
+      console.error('loadWeekPlanner cloud error', e);
+      if (!localData) {
+        weekData = createWeekPlanner(weekId);
+        rebuildColorMap();
+        boot();
+      }
+    }
+  } else if (!localData) {
+    weekData = createWeekPlanner(weekId);
+    rebuildColorMap();
+    boot();
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   AUTH
+════════════════════════════════════════════════════════════ */
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  loadWeekPlanner();
+});
+
+/* ════════════════════════════════════════════════════════════
+   AUTO-SAVE
+════════════════════════════════════════════════════════════ */
+let saveTimer = null;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveInd.textContent = '저장 중...';
+  saveTimer = setTimeout(() => {
+    saveWeekPlanner(weekData);
+    saveInd.textContent = '저장됨 ✓';
+    setTimeout(() => { saveInd.textContent = ''; }, 1500);
+  }, 500);
+}
+
+/* ════════════════════════════════════════════════════════════
+   TITLE
+════════════════════════════════════════════════════════════ */
+function renderTitle() {
+  const display = weekData.customTitle || weekData.title;
+  titleSpan.textContent = display;
+  titleInput.value = display;
+  weekBadge.textContent = 'WEEK ' + getNthWeekOfMonth(weekId);
+}
+titleSpan.addEventListener('click', () => {
+  titleSpan.hidden = true;
+  titleInput.hidden = false;
+  titleInput.focus();
+  titleInput.select();
+});
+titleInput.addEventListener('blur', commitTitle);
+titleInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter')  titleInput.blur();
+  if (e.key === 'Escape') { titleInput.value = weekData.customTitle || weekData.title; titleInput.blur(); }
+});
+function commitTitle() {
+  const val = titleInput.value.trim();
+  if (val) weekData.customTitle = val;
+  titleSpan.textContent = weekData.customTitle || weekData.title;
+  titleSpan.hidden = false;
+  titleInput.hidden = true;
+  scheduleSave();
+}
+
+/* ════════════════════════════════════════════════════════════
+   COLOR MAP 복원
+════════════════════════════════════════════════════════════ */
+function rebuildColorMap() {
+  weekData.cells.forEach(row => {
+    row.forEach(cell => {
+      if (cell.text && cell.color) {
+        colorMap[cell.text.trim()] = cell.color;
+      }
+    });
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   DRAG-AND-DROP (셀 내용 맞바꾸기)
+════════════════════════════════════════════════════════════ */
+let dragSrc = null;
+
+function attachCellDrag(cellEl, blockIdx, dayIdx) {
+  const handle = cellEl.querySelector('.cell-drag-handle');
+  if (!handle) return;
+
+  handle.addEventListener('mousedown', e => {
+    e.preventDefault();
+    dragSrc = { blockIdx, dayIdx };
+    cellEl.classList.add('cell-dragging');
+    document.addEventListener('mousemove', onCellMouseMove);
+    document.addEventListener('mouseup',   onCellMouseUp);
+  });
+
+  handle.addEventListener('touchstart', e => {
+    e.preventDefault();
+    dragSrc = { blockIdx, dayIdx };
+    cellEl.classList.add('cell-dragging');
+    document.addEventListener('touchmove', onCellTouchMove, {passive:false});
+    document.addEventListener('touchend',  onCellTouchEnd);
+  }, {passive:false});
+
+  cellEl.addEventListener('mouseenter', () => {
+    if (!dragSrc) return;
+    if (dragSrc.blockIdx === blockIdx && dragSrc.dayIdx === dayIdx) return;
+    document.querySelectorAll('.week-cell').forEach(c => c.classList.remove('cell-drag-over'));
+    cellEl.classList.add('cell-drag-over');
+  });
+  cellEl.addEventListener('mouseleave', () => {
+    cellEl.classList.remove('cell-drag-over');
+  });
+}
+
+function onCellMouseMove(e) {
+  if (!dragSrc) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const target = el && el.closest('.week-cell');
+  document.querySelectorAll('.week-cell').forEach(c => c.classList.remove('cell-drag-over'));
+  if (target) {
+    const bi = +target.dataset.blockIdx;
+    const di = +target.dataset.dayIdx;
+    if (bi !== dragSrc.blockIdx || di !== dragSrc.dayIdx)
+      target.classList.add('cell-drag-over');
+  }
+}
+
+function onCellMouseUp(e) {
+  document.removeEventListener('mousemove', onCellMouseMove);
+  document.removeEventListener('mouseup',   onCellMouseUp);
+  const over = document.querySelector('.cell-drag-over');
+  if (over && dragSrc) {
+    swapCells(dragSrc.blockIdx, dragSrc.dayIdx, +over.dataset.blockIdx, +over.dataset.dayIdx);
+  }
+  finishCellDrag();
+}
+
+function onCellTouchMove(e) { e.preventDefault(); }
+function onCellTouchEnd(e) {
+  document.removeEventListener('touchend', onCellTouchEnd);
+  document.removeEventListener('touchmove', onCellTouchMove);
+  const t = e.changedTouches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  const cellEl = el && el.closest('.week-cell');
+  if (cellEl && dragSrc) {
+    const destBlock = +cellEl.dataset.blockIdx;
+    const destDay   = +cellEl.dataset.dayIdx;
+    if (destBlock !== dragSrc.blockIdx || destDay !== dragSrc.dayIdx) {
+      swapCells(dragSrc.blockIdx, dragSrc.dayIdx, destBlock, destDay);
+    }
+  }
+  finishCellDrag();
+}
+
+function swapCells(bi1, di1, bi2, di2) {
+  const a = weekData.cells[bi1][di1];
+  const b = weekData.cells[bi2][di2];
+  [weekData.cells[bi1][di1], weekData.cells[bi2][di2]] = [b, a];
+  scheduleSave();
+  renderGrid();
+  renderCalc();
+}
+
+function finishCellDrag() {
+  document.querySelectorAll('.week-cell').forEach(c =>
+    c.classList.remove('cell-dragging','cell-drag-over'));
+  dragSrc = null;
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDER GRID  (영역 1)
+════════════════════════════════════════════════════════════ */
+function renderGrid() {
+  gridWrap.innerHTML = '';
+  const dates = weekDates(weekId);
+  const todayStr = todayId();
+
+  const headerRow = document.createElement('div');
+  headerRow.className = 'week-grid-header';
+
+  const corner = document.createElement('div');
+  corner.className = 'week-corner';
+  corner.innerHTML = '<span class="corner-day">Day</span><span class="corner-block">Block</span>';
+  headerRow.appendChild(corner);
+
+  dates.forEach((dateId, di) => {
+    const d = fromId(dateId);
+    const th = document.createElement('div');
+    th.className = 'week-day-header' + (dateId === todayStr ? ' is-today' : '');
+    th.innerHTML = `<span class="day-en">${DAYS_EN[d.getDay()]}</span>`;
+    headerRow.appendChild(th);
+  });
+  gridWrap.appendChild(headerRow);
+
+  const LUNCH_AFTER  = 2;
+  const DINNER_AFTER = 4;
+
+  for (let bi = 0; bi < 6; bi++) {
+    const row = document.createElement('div');
+    row.className = 'week-grid-row';
+    row.dataset.blockIdx = bi;
+
+    const numCell = document.createElement('div');
+    numCell.className = 'week-block-num';
+    numCell.textContent = bi + 1;
+    row.appendChild(numCell);
+
+    for (let di = 0; di < 7; di++) {
+      const cell = weekData.cells[bi][di];
+      const cellEl = document.createElement('div');
+      cellEl.className = 'week-cell';
+      cellEl.dataset.blockIdx = bi;
+      cellEl.dataset.dayIdx   = di;
+
+      const bg = cell.text.trim() ? getColorForText(cell.text) : '';
+      cellEl.style.background = bg;
+
+      const handle = document.createElement('div');
+      handle.className = 'cell-drag-handle';
+      handle.title = '드래그하여 내용 교체';
+      handle.innerHTML = '⠿';
+      cellEl.appendChild(handle);
+
+      const inp = document.createElement('input');
+      inp.type  = 'text';
+      inp.className = 'week-cell-input';
+      inp.value = cell.text;
+      inp.placeholder = '';
+      inp.addEventListener('focus', () => cellEl.classList.add('cell-focused'));
+      inp.addEventListener('blur',  () => cellEl.classList.remove('cell-focused'));
+      inp.addEventListener('input', () => {
+        cell.text = inp.value;
+        const newBg = cell.text.trim() ? getColorForText(cell.text) : '';
+        cell.color = newBg;
+        cellEl.style.background = newBg;
+        scheduleSave();
+        renderCalc();
+        refreshAllColors();
+      });
+
+      cellEl.appendChild(inp);
+      row.appendChild(cellEl);
+      attachCellDrag(cellEl, bi, di);
+    }
+
+    gridWrap.appendChild(row);
+
+    if (bi + 1 === LUNCH_AFTER)  appendDividerLine(gridWrap, 'Lunch');
+    if (bi + 1 === DINNER_AFTER) appendDividerLine(gridWrap, 'Dinner');
+  }
+}
+
+function appendDividerLine(parent, label) {
+  const div = document.createElement('div');
+  div.className = 'week-divider';
+  div.innerHTML = `<span class="week-divider-label">${label}</span>`;
+  parent.appendChild(div);
+}
+
+function refreshAllColors() {
+  document.querySelectorAll('.week-cell').forEach(cellEl => {
+    const inp  = cellEl.querySelector('.week-cell-input');
+    const text = inp ? inp.value.trim() : '';
+    const bg   = text ? getColorForText(text) : '';
+    cellEl.style.background = bg;
+    const bi = +cellEl.dataset.blockIdx;
+    const di = +cellEl.dataset.dayIdx;
+    weekData.cells[bi][di].color = bg;
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDER CALC  (영역 3)
+════════════════════════════════════════════════════════════ */
+function getBlockCounts() {
+  const counts = {};
+  weekData.cells.forEach(row => {
+    row.forEach(cell => {
+      const t = cell.text.trim();
+      if (t) counts[t] = (counts[t] || 0) + 1;
+    });
+  });
+  return counts;
+}
+
+function renderCalc() {
+  calcWrap.innerHTML = '';
+  const counts = getBlockCounts();
+  const total  = 42;
+  const used   = Object.values(counts).reduce((s,n) => s+n, 0);
+  const free   = total - used;
+
+  const header = document.createElement('div');
+  header.className = 'calc-header';
+  header.innerHTML = `
+    <span class="calc-title">가용블럭</span>
+    <span class="calc-total">${free}&nbsp;<span style="color:var(--text-muted);font-size:11px">/ ${total}</span></span>
+  `;
+  calcWrap.appendChild(header);
+
+  const subh = document.createElement('div');
+  subh.className = 'calc-subheader';
+  subh.innerHTML = '<span></span><span>계획</span><span>실천</span><span></span><span>계획</span><span>실천</span>';
+  calcWrap.appendChild(subh);
+
+  const entries = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const rows = Math.ceil(entries.length / 2);
+
+  const table = document.createElement('div');
+  table.className = 'calc-table';
+
+  for (let r = 0; r < rows; r++) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'calc-row';
+    for (let c = 0; c < 2; c++) {
+      const idx = r * 2 + c;
+      if (idx < entries.length) {
+        const [text, count] = entries[idx];
+        const bg = getColorForText(text);
+        rowEl.innerHTML += `
+          <div class="calc-item" style="background:${bg}">
+            <span class="calc-item-label">${escHtml(text)}</span>
+          </div>
+          <div class="calc-plan">${count}</div>
+          <div class="calc-actual"></div>
+        `;
+      } else {
+        rowEl.innerHTML += '<div class="calc-item empty"></div><div class="calc-plan"></div><div class="calc-actual"></div>';
+      }
+    }
+    table.appendChild(rowEl);
+  }
+  if (rows < 2) {
+    for (let r = rows; r < 2; r++) {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'calc-row';
+      rowEl.innerHTML = '<div class="calc-item empty"></div><div class="calc-plan"></div><div class="calc-actual"></div><div class="calc-item empty"></div><div class="calc-plan"></div><div class="calc-actual"></div>';
+      table.appendChild(rowEl);
+    }
+  }
+  calcWrap.appendChild(table);
+}
+
+function escHtml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDER PRE-CHECK LIST  (영역 2)
+════════════════════════════════════════════════════════════ */
+function renderPreChecks() {
+  preList.innerHTML = '';
+  weekData.preChecks.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'pre-item';
+    row.innerHTML = buildPreCheckHTML(item);
+    preList.appendChild(row);
+
+    const cb = row.querySelector(`input[type=checkbox][data-id="${item.id}"]`);
+    if (cb) {
+      cb.addEventListener('change', () => {
+        item.checked = cb.checked;
+        scheduleSave();
+      });
+    }
+
+    const valueInput = row.querySelector(`.pre-value-input[data-id="${item.id}"]`);
+    if (valueInput) {
+      valueInput.addEventListener('input', () => {
+        item.value = valueInput.value;
+        scheduleSave();
+      });
+    }
+
+    if (item.options) {
+      item.options.forEach(opt => {
+        const btn = row.querySelector(`.pre-option[data-opt="${opt}"]`);
+        if (btn) {
+          btn.addEventListener('click', () => {
+            item.selectedOption = item.selectedOption === opt ? null : opt;
+            renderPreChecks();
+            scheduleSave();
+          });
+        }
+      });
+    }
+
+    if (item.subItems) {
+      item.subItems.forEach(sub => {
+        const subCb = row.querySelector(`input[type=checkbox][data-id="${sub.id}"]`);
+        if (subCb) {
+          subCb.addEventListener('change', () => {
+            sub.checked = subCb.checked;
+            scheduleSave();
+          });
+        }
+        const subValInput = row.querySelector(`.pre-value-input[data-id="${sub.id}"]`);
+        if (subValInput) {
+          subValInput.addEventListener('input', () => {
+            sub.value = subValInput.value;
+            scheduleSave();
+          });
+        }
+      });
+    }
+  });
+}
+
+function buildPreCheckHTML(item) {
+  const hasValueInput = Object.prototype.hasOwnProperty.call(item, 'value');
+
+  let html = `<div class="pre-check-row">
+    <label class="pre-check-label">
+      <input type="checkbox" data-id="${item.id}" ${item.checked ? 'checked' : ''}>
+      <span class="pre-checkmark"></span>
+      <span class="pre-text">${escHtml(item.text)}</span>`;
+
+  if (item.options) {
+    html += `<span class="pre-options">`;
+    item.options.forEach(opt => {
+      html += `<button class="pre-option${item.selectedOption===opt?' selected':''}" data-opt="${opt}">${opt}</button>`;
+    });
+    html += `</span>`;
+  }
+
+  html += `</label>`;
+
+  if (hasValueInput && !item.options) {
+    html += `<input type="text" class="pre-value-input" data-id="${item.id}"
+      value="${escHtml(item.value || '')}" placeholder="입력...">`;
+  }
+
+  html += `</div>`;
+
+  if (item.subItems) {
+    html += `<div class="pre-subitems">`;
+    item.subItems.forEach(sub => {
+      const subHasValue = Object.prototype.hasOwnProperty.call(sub, 'value');
+      html += `<div class="pre-check-row pre-subitem-row">
+        <label class="pre-check-label pre-subitem">
+          <input type="checkbox" data-id="${sub.id}" ${sub.checked ? 'checked' : ''}>
+          <span class="pre-checkmark"></span>
+          <span class="pre-text">${escHtml(sub.text)}</span>
+        </label>`;
+      if (subHasValue) {
+        html += `<input type="text" class="pre-value-input" data-id="${sub.id}"
+          value="${escHtml(sub.value || '')}" placeholder="입력...">`;
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+  return html;
+}
+
+/* ════════════════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════════════════ */
+function boot() {
+  renderTitle();
+  renderGrid();
+  renderCalc();
+  renderPreChecks();
+}
+</script>
+</body>
+</html>

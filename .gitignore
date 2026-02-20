@@ -1,0 +1,9 @@
+# Claude settings (로컬 전용)
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 참고용 이미지 (배포 불필요)
+*.png

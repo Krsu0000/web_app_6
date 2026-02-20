@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>플래너 — 블럭 식스</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/planner.css">
+  <link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <a href="index.html" class="logo">■6 Block Planner</a>
+    <span class="spacer"></span>
+    <button onclick="window.print()" class="btn btn-ghost">🖨 인쇄</button>
+  </header>
+
+  <main class="planner-page">
+    <div class="planner-header">
+      <button class="back-btn"
+        onclick="history.length>1?history.back():location.href='index.html'"
+        title="목록으로">←</button>
+      <div class="title-wrap">
+        <div class="day-badge" id="day-label">MON</div>
+        <span id="planner-title">로딩 중...</span>
+        <input id="planner-title-input" type="text" hidden autocomplete="off">
+      </div>
+      <span id="save-indicator" class="save-indicator"></span>
+    </div>
+
+    <div class="planner-card">
+      <div class="col-header">
+        <span>#</span>
+        <span>시간</span>
+        <span>✓</span>
+        <span>할 일</span>
+        <span>메모</span>
+      </div>
+      <div id="blocks-container"></div>
+      <div class="planner-footer">
+        <div class="footer-memo">
+          <div class="footer-label">MEMO</div>
+          <textarea id="footer-memo" class="footer-textarea" data-key="memo"
+            placeholder="자유롭게 메모하세요..." rows="5"></textarea>
+        </div>
+        <div class="footer-section">
+          <div class="footer-label">GOOD</div>
+          <textarea id="footer-good" class="footer-textarea" data-key="good"
+            placeholder="잘 된 점..." rows="2"></textarea>
+        </div>
+        <div class="footer-section">
+          <div class="footer-label">BAD</div>
+          <textarea id="footer-bad" class="footer-textarea" data-key="bad"
+            placeholder="아쉬운 점..." rows="2"></textarea>
+        </div>
+        <div class="footer-section">
+          <div class="footer-label">NEXT</div>
+          <textarea id="footer-next" class="footer-textarea" data-key="next"
+            placeholder="내일 할 일..." rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════
+   FIREBASE INIT
+════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBL20javPCMV_KDmjeGrIHgQvugxuprgMo",
+  authDomain: "cellular-unity-445007-p8.firebaseapp.com",
+  projectId: "cellular-unity-445007-p8",
+  storageBucket: "cellular-unity-445007-p8.firebasestorage.app",
+  messagingSenderId: "986951321974",
+  appId: "1:986951321974:web:29c63d4193ea2b3b8e5257",
+  measurementId: "G-N3CPP8LPPY"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let currentUser = null;
+
+/* ════════════════════════════════════════════════════════════
+   DATE UTILS
+════════════════════════════════════════════════════════════ */
+const DAYS_KO = ['일','월','화','수','목','금','토'];
+const DAYS_EN = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+
+function todayId() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fromId(id) {
+  const [y,m,d] = id.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function formatTitle(id) {
+  const date = fromId(id);
+  return `${date.getFullYear()}년 ${date.getMonth()+1}월 ${date.getDate()}일 (${DAYS_KO[date.getDay()]})`;
+}
+function getDayEn(id) { return DAYS_EN[fromId(id).getDay()]; }
+
+/* ════════════════════════════════════════════════════════════
+   STORAGE — localStorage + Firestore 듀얼 저장
+════════════════════════════════════════════════════════════ */
+const PREFIX = 'planner_';
+
+function getPlannerLocal(id) {
+  const raw = localStorage.getItem(PREFIX + id);
+  return raw ? JSON.parse(raw) : null;
+}
+function savePlannerLocal(data) {
+  data.updatedAt = new Date().toISOString();
+  localStorage.setItem(PREFIX + data.id, JSON.stringify(data));
+}
+
+/* Firestore 저장 (로그인 상태일 때만) */
+async function savePlannerCloud(data) {
+  if (!currentUser) return;
+  try {
+    await db.collection('users').doc(currentUser.uid)
+            .collection('planners').doc(data.id)
+            .set(data);
+  } catch(e) {
+    console.error('savePlannerCloud error', e);
+  }
+}
+
+/* 통합 저장: localStorage + (로그인 시) Firestore */
+function savePlanner(data) {
+  savePlannerLocal(data);
+  savePlannerCloud(data); // 비동기, fire-and-forget
+}
+
+/* ════════════════════════════════════════════════════════════
+   DATA MODEL
+════════════════════════════════════════════════════════════ */
+function createPlanner(id) {
+  const now = new Date().toISOString();
+  const data = {
+    id,
+    title: formatTitle(id),
+    customTitle: null,
+    blocks: Array.from({length:6}, (_,i) => ({
+      id: i+1,
+      timeLabel: '',
+      checks: [false, false, false],
+      task: '',
+      memo: '',
+      tasks: [
+        {text:'', done:false},
+        {text:'', done:false},
+        {text:'', done:false}
+      ]
+    })),
+    dividers: [2, 4],
+    footer: {memo:'', good:'', bad:'', next:''},
+    createdAt: now,
+    updatedAt: now
+  };
+  savePlanner(data);
+  return data;
+}
+
+function migratePlanner(data) {
+  if (!data.dividers) data.dividers = [2, 4];
+  data.blocks.forEach(b => {
+    if (!b.tasks) {
+      b.tasks = [
+        {text: b.task || '', done: b.checks?.[0] || false},
+        {text: '', done: b.checks?.[1] || false},
+        {text: '', done: b.checks?.[2] || false}
+      ];
+    }
+  });
+  return data;
+}
+
+/* ════════════════════════════════════════════════════════════
+   INIT — Firestore 우선, 없으면 localStorage fallback
+════════════════════════════════════════════════════════════ */
+const params = new URLSearchParams(location.search);
+const dateId = params.get('date') || todayId();
+
+const titleSpan  = document.getElementById('planner-title');
+const titleInput = document.getElementById('planner-title-input');
+const dayLabel   = document.getElementById('day-label');
+const blocksWrap = document.getElementById('blocks-container');
+const saveInd    = document.getElementById('save-indicator');
+const ftMemo     = document.getElementById('footer-memo');
+const ftGood     = document.getElementById('footer-good');
+const ftBad      = document.getElementById('footer-bad');
+const ftNext     = document.getElementById('footer-next');
+
+let plannerData = null;
+
+async function loadPlanner() {
+  // 1) localStorage에서 먼저 로드해서 즉시 표시 (빠른 응답)
+  let localData = getPlannerLocal(dateId);
+  if (localData) {
+    plannerData = migratePlanner(localData);
+    boot();
+  }
+
+  // 2) 로그인 상태면 Firestore에서 최신 데이터 가져와 갱신
+  if (currentUser) {
+    try {
+      const doc = await db.collection('users').doc(currentUser.uid)
+                          .collection('planners').doc(dateId).get();
+      if (doc.exists) {
+        const cloudData = doc.data();
+        // updatedAt 기준으로 더 최신 데이터 사용
+        const localUpdated = plannerData ? new Date(plannerData.updatedAt || 0) : new Date(0);
+        const cloudUpdated = new Date(cloudData.updatedAt || 0);
+        if (cloudUpdated > localUpdated) {
+          plannerData = migratePlanner(cloudData);
+          savePlannerLocal(plannerData); // 로컬에도 동기화
+          boot(); // 최신 데이터로 다시 렌더
+        }
+      } else if (!localData) {
+        // 로컬에도 없으면 새로 생성
+        plannerData = createPlanner(dateId);
+        boot();
+      }
+    } catch(e) {
+      console.error('loadPlanner cloud error', e);
+      if (!localData) {
+        plannerData = createPlanner(dateId);
+        boot();
+      }
+    }
+  } else if (!localData) {
+    plannerData = createPlanner(dateId);
+    boot();
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   AUTH — 로그인 상태 감지 후 loadPlanner 실행
+════════════════════════════════════════════════════════════ */
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  loadPlanner();
+});
+
+/* ════════════════════════════════════════════════════════════
+   AUTO-SAVE
+════════════════════════════════════════════════════════════ */
+let saveTimer = null;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveInd.textContent = '저장 중...';
+  saveTimer = setTimeout(() => {
+    savePlanner(plannerData);
+    saveInd.textContent = '저장됨 ✓';
+    setTimeout(() => { saveInd.textContent = ''; }, 1500);
+  }, 500);
+}
+
+/* ════════════════════════════════════════════════════════════
+   TITLE
+════════════════════════════════════════════════════════════ */
+function renderTitle() {
+  const display = plannerData.customTitle || plannerData.title;
+  titleSpan.textContent = display;
+  titleInput.value      = display;
+  dayLabel.textContent  = getDayEn(dateId);
+}
+titleSpan.addEventListener('click', () => {
+  titleSpan.hidden = true;
+  titleInput.hidden = false;
+  titleInput.focus();
+  titleInput.select();
+});
+titleInput.addEventListener('blur', commitTitle);
+titleInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter')  titleInput.blur();
+  if (e.key === 'Escape') {
+    titleInput.value = plannerData.customTitle || plannerData.title;
+    titleInput.blur();
+  }
+});
+function commitTitle() {
+  const val = titleInput.value.trim();
+  if (val) plannerData.customTitle = val;
+  titleSpan.textContent = plannerData.customTitle || plannerData.title;
+  titleSpan.hidden = false;
+  titleInput.hidden = true;
+  scheduleSave();
+}
+
+/* ════════════════════════════════════════════════════════════
+   AUTO-RESIZE TEXTAREA
+════════════════════════════════════════════════════════════ */
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+/* ════════════════════════════════════════════════════════════
+   TASK LINES
+════════════════════════════════════════════════════════════ */
+function ensureThreeTasks(block) {
+  while (block.tasks.length < 3) block.tasks.push({text:'', done:false});
+  block.tasks.length = 3;
+}
+
+function buildTaskLines(block, taskDiv) {
+  ensureThreeTasks(block);
+  const container = document.createElement('div');
+  container.className = 'task-lines';
+
+  block.tasks.forEach((taskObj, idx) => {
+    const line = document.createElement('div');
+    line.className = 'task-line';
+
+    const ta = document.createElement('textarea');
+    ta.className = 'task-line-text' + (block.checks[idx] ? ' done' : '');
+    ta.value = taskObj.text;
+    ta.rows = 1;
+    ta.placeholder = idx === 0 ? '할 일을 입력하세요...' : '';
+
+    ta.addEventListener('input', () => {
+      taskObj.text = ta.value;
+      autoResize(ta);
+      scheduleSave();
+    });
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const lines = taskDiv.querySelectorAll('.task-line-text');
+        if (lines[idx + 1]) lines[idx + 1].focus();
+      }
+    });
+
+    autoResize(ta);
+    line.appendChild(ta);
+    container.appendChild(line);
+  });
+
+  return container;
+}
+
+function rebuildTaskLines(block, taskDiv) {
+  const old = taskDiv.querySelector('.task-lines');
+  const next = buildTaskLines(block, taskDiv);
+  if (old) taskDiv.replaceChild(next, old);
+  else     taskDiv.appendChild(next);
+}
+
+function syncCheckToTask(block, ci, checked, taskDiv) {
+  block.checks[ci] = checked;
+  if (block.tasks[ci]) block.tasks[ci].done = checked;
+  const lines = taskDiv ? taskDiv.querySelectorAll('.task-line-text') : [];
+  if (lines[ci]) lines[ci].classList.toggle('done', checked);
+  scheduleSave();
+}
+
+/* ════════════════════════════════════════════════════════════
+   DRAG-AND-DROP (블럭 순서 교체)
+════════════════════════════════════════════════════════════ */
+let dragSrcIdx = null;
+
+function swapBlockContent(i, j) {
+  const a = plannerData.blocks[i];
+  const b = plannerData.blocks[j];
+  const fields = ['timeLabel','checks','task','memo','tasks'];
+  fields.forEach(f => { [a[f], b[f]] = [b[f], a[f]]; });
+  scheduleSave();
+}
+
+function attachDragEvents(rowEl, blockIdx) {
+  const handle = rowEl.querySelector('.drag-handle');
+  if (!handle) return;
+
+  function startDrag(e) {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    e.preventDefault();
+    dragSrcIdx = blockIdx;
+    rowEl.classList.add('dragging');
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup',   onMouseUp);
+    document.addEventListener('touchmove', onTouchMove, {passive:false});
+    document.addEventListener('touchend',  onTouchEnd);
+  }
+
+  handle.addEventListener('mousedown',  startDrag);
+  handle.addEventListener('touchstart', startDrag, {passive:false});
+
+  rowEl.addEventListener('dragover', e => e.preventDefault());
+  rowEl.addEventListener('mouseenter', () => {
+    if (dragSrcIdx === null || dragSrcIdx === blockIdx) return;
+    clearDragOver();
+    rowEl.classList.add('drag-over-top');
+  });
+  rowEl.addEventListener('mouseleave', () => {
+    rowEl.classList.remove('drag-over-top','drag-over-bottom');
+  });
+}
+
+function clearDragOver() {
+  blocksWrap.querySelectorAll('.block-row').forEach(r =>
+    r.classList.remove('drag-over-top','drag-over-bottom')
+  );
+}
+
+function getRowAtPoint(x, y) {
+  const rows = [...blocksWrap.querySelectorAll('.block-row')];
+  for (const r of rows) {
+    const rect = r.getBoundingClientRect();
+    if (y >= rect.top && y <= rect.bottom && x >= rect.left && x <= rect.right)
+      return r;
+  }
+  return null;
+}
+
+function onMouseMove(e) {
+  if (dragSrcIdx === null) return;
+  const target = getRowAtPoint(e.clientX, e.clientY);
+  clearDragOver();
+  if (target) {
+    const idx = +target.dataset.blockIdx;
+    if (idx !== dragSrcIdx) target.classList.add('drag-over-top');
+  }
+}
+function onTouchMove(e) {
+  e.preventDefault();
+  const t = e.touches[0];
+  onMouseMove({clientX: t.clientX, clientY: t.clientY});
+}
+function onMouseUp(e) { endDrag(e.clientX, e.clientY); }
+function onTouchEnd(e) {
+  const t = e.changedTouches[0];
+  endDrag(t.clientX, t.clientY);
+}
+
+function endDrag(x, y) {
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup',   onMouseUp);
+  document.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchend',  onTouchEnd);
+
+  if (dragSrcIdx === null) return;
+
+  const target = getRowAtPoint(x, y);
+  if (target) {
+    const destIdx = +target.dataset.blockIdx;
+    if (destIdx !== dragSrcIdx) {
+      swapBlockContent(dragSrcIdx, destIdx);
+      renderBlocks();
+    }
+  }
+  clearDragOver();
+  dragSrcIdx = null;
+}
+
+/* ════════════════════════════════════════════════════════════
+   DIVIDER (기준 라인)
+════════════════════════════════════════════════════════════ */
+let movingDividerIdx = null;
+
+function getBlockRowByY(y) {
+  const rows = [...blocksWrap.querySelectorAll('.block-row')];
+  let best = null, bestDist = Infinity;
+  for (const r of rows) {
+    const rect = r.getBoundingClientRect();
+    const mid  = (rect.top + rect.bottom) / 2;
+    const dist = Math.abs(y - mid);
+    if (y >= rect.top && y <= rect.bottom) return r;
+    if (dist < bestDist) { bestDist = dist; best = r; }
+  }
+  return bestDist < 60 ? best : null;
+}
+
+function makeDividerEl(divIdx) {
+  const wrap = document.createElement('div');
+  wrap.className = 'divider-row';
+  wrap.dataset.divIdx = divIdx;
+  wrap.title = '드래그하여 기준선 위치 조정';
+
+  const line = document.createElement('div');
+  line.className = 'divider-line';
+
+  const lbl = document.createElement('span');
+  lbl.className = 'divider-label';
+  lbl.textContent = divIdx === 0 ? '점심' : '저녁';
+  line.appendChild(lbl);
+  wrap.appendChild(line);
+
+  function startDividerDrag(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    movingDividerIdx = divIdx;
+    line.style.background = 'var(--accent)';
+    lbl.style.background  = 'var(--accent)';
+    document.addEventListener('mousemove', onDividerMove);
+    document.addEventListener('mouseup',   onDividerUp);
+    document.addEventListener('touchmove', onDividerTouchMove, {passive:false});
+    document.addEventListener('touchend',  onDividerTouchEnd);
+  }
+  wrap.addEventListener('mousedown',  startDividerDrag);
+  wrap.addEventListener('touchstart', startDividerDrag, {passive:false});
+
+  return wrap;
+}
+
+function highlightDividerTarget(y) {
+  blocksWrap.querySelectorAll('.block-row').forEach(r =>
+    r.classList.remove('drag-over-bottom'));
+  const row = getBlockRowByY(y);
+  if (row) row.classList.add('drag-over-bottom');
+}
+
+function onDividerMove(e) { highlightDividerTarget(e.clientY); }
+function onDividerTouchMove(e) {
+  e.preventDefault();
+  highlightDividerTarget(e.touches[0].clientY);
+}
+function onDividerUp(e)       { endDividerDrag(e.clientY); }
+function onDividerTouchEnd(e) { endDividerDrag(e.changedTouches[0].clientY); }
+
+function endDividerDrag(y) {
+  document.removeEventListener('mousemove', onDividerMove);
+  document.removeEventListener('mouseup',   onDividerUp);
+  document.removeEventListener('touchmove', onDividerTouchMove);
+  document.removeEventListener('touchend',  onDividerTouchEnd);
+
+  blocksWrap.querySelectorAll('.block-row').forEach(r =>
+    r.classList.remove('drag-over-bottom'));
+
+  const savedIdx = movingDividerIdx;
+  movingDividerIdx = null;
+  if (savedIdx === null) return;
+
+  const row = getBlockRowByY(y);
+  if (row) {
+    const targetBlockIdx = +row.dataset.blockIdx;
+    const afterBlock     = targetBlockIdx + 1;
+
+    const other = plannerData.dividers[1 - savedIdx];
+    let valid = afterBlock >= 1 && afterBlock <= 5;
+    if (savedIdx === 0 && afterBlock >= other) valid = false;
+    if (savedIdx === 1 && afterBlock <= other) valid = false;
+
+    if (valid) {
+      plannerData.dividers[savedIdx] = afterBlock;
+      scheduleSave();
+      renderBlocks();
+      return;
+    }
+  }
+  blocksWrap.querySelectorAll('.divider-row').forEach(d => {
+    const dl = d.querySelector('.divider-line');
+    const lb = d.querySelector('.divider-label');
+    if (dl) dl.style.background = '';
+    if (lb) lb.style.background = '';
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDER BLOCKS
+════════════════════════════════════════════════════════════ */
+function renderBlocks() {
+  blocksWrap.innerHTML = '';
+
+  plannerData.blocks.forEach((block, blockIdx) => {
+    const row = document.createElement('div');
+    row.className = 'block-row';
+    row.dataset.blockIdx = blockIdx;
+
+    const numDiv = document.createElement('div');
+    numDiv.className = 'block-num';
+
+    const numLabel = document.createElement('span');
+    numLabel.className = 'block-num-label';
+    numLabel.textContent = block.id;
+
+    const handle = document.createElement('div');
+    handle.className = 'drag-handle';
+    handle.title = '꾹 누르고 드래그하여 순서 변경';
+    for (let i = 0; i < 4; i++) {
+      const bar = document.createElement('span');
+      handle.appendChild(bar);
+    }
+
+    numDiv.appendChild(numLabel);
+    numDiv.appendChild(handle);
+
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'block-time';
+    const timeInput = document.createElement('input');
+    timeInput.className = 'time-input';
+    timeInput.type = 'text';
+    timeInput.placeholder = '시간';
+    timeInput.maxLength = 10;
+    timeInput.value = block.timeLabel;
+    timeInput.addEventListener('input', () => { block.timeLabel = timeInput.value; scheduleSave(); });
+    timeDiv.appendChild(timeInput);
+
+    const taskDiv = document.createElement('div');
+    taskDiv.className = 'block-task';
+
+    const checksDiv = document.createElement('div');
+    checksDiv.className = 'block-checks';
+    block.checks.forEach((checked, ci) => {
+      const label = document.createElement('label');
+      label.className = 'check-label';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = checked;
+      cb.addEventListener('change', () => syncCheckToTask(block, ci, cb.checked, taskDiv));
+      const mark = document.createElement('span');
+      mark.className = 'checkmark';
+      label.appendChild(cb);
+      label.appendChild(mark);
+      checksDiv.appendChild(label);
+    });
+
+    rebuildTaskLines(block, taskDiv);
+
+    const memoDiv = document.createElement('div');
+    memoDiv.className = 'block-memo';
+    const memoTA = document.createElement('textarea');
+    memoTA.className = 'memo-input';
+    memoTA.placeholder = '메모...';
+    memoTA.value = block.memo;
+    memoTA.addEventListener('input', () => { block.memo = memoTA.value; autoResize(memoTA); scheduleSave(); });
+    memoDiv.appendChild(memoTA);
+    autoResize(memoTA);
+
+    row.appendChild(numDiv);
+    row.appendChild(timeDiv);
+    row.appendChild(checksDiv);
+    row.appendChild(taskDiv);
+    row.appendChild(memoDiv);
+    blocksWrap.appendChild(row);
+
+    attachDragEvents(row, blockIdx);
+
+    plannerData.dividers.forEach((afterBlock, di) => {
+      if (afterBlock === block.id) {
+        blocksWrap.appendChild(makeDividerEl(di));
+      }
+    });
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   FOOTER
+════════════════════════════════════════════════════════════ */
+function renderFooter() {
+  ftMemo.value = plannerData.footer.memo;
+  ftGood.value = plannerData.footer.good;
+  ftBad.value  = plannerData.footer.bad;
+  ftNext.value = plannerData.footer.next;
+  [ftMemo, ftGood, ftBad, ftNext].forEach(el => {
+    autoResize(el);
+    el.addEventListener('input', () => {
+      plannerData.footer[el.dataset.key] = el.value;
+      autoResize(el);
+      scheduleSave();
+    });
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   BOOT — 데이터 로드 후 UI 초기화
+════════════════════════════════════════════════════════════ */
+let booted = false;
+function boot() {
+  booted = true;
+  renderTitle();
+  renderBlocks();
+  renderFooter();
+}
+</script>
+</body>
+</html>
