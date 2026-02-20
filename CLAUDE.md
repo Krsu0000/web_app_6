@@ -8,13 +8,87 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. **Daily Planner** (`planner.html`) — 6 time blocks per day, each with 3 checkboxes, 3 task lines, and a memo area. Footer captures MEMO / GOOD / BAD / NEXT reflections.
 2. **Weekly Planner** (`week.html`) — 6 blocks × 7 days grid. Cells are color-coded by text content. Includes Pre-Check List and Block Calculation table (가용블럭).
 
-All data is persisted in `localStorage`. No backend, no build step.
+Data is persisted in both `localStorage` (offline cache) and **Firebase Firestore** (cloud sync).
+Authentication is handled by **Firebase Auth (Google Sign-In)**.
+
+## Hosting & Deployment
+
+- **Live URL**: https://krsu0000.github.io/web_app_6
+- **GitHub repo**: https://github.com/Krsu0000/web_app_6
+- **Branch**: `main` → GitHub Pages auto-deploys on push
+
+### Deploy workflow
+```bash
+cd C:\Users\pc\Desktop\6block
+git add .
+git commit -m "message"
+git push origin main
+# GitHub Pages 자동 배포 (1~2분 소요)
+```
+
+## Firebase Configuration
+
+- **Project ID**: `cellular-unity-445007-p8`
+- **Auth domain**: `cellular-unity-445007-p8.firebaseapp.com`
+- **Firebase Console**: https://console.firebase.google.com → cellular-unity-445007-p8
+
+### Firebase SDK 로드 방식
+CDN compat build (ES module 금지 — `file://` 호환 및 인라인 스크립트 사용):
+```html
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+```
+
+### Firestore 데이터 구조
+```
+users/
+  {uid}/
+    planners/
+      {YYYY-MM-DD}   ← daily planner document
+    weeks/
+      {YYYY-MM-DD}   ← weekly planner document (Monday date)
+```
+
+### Firestore 보안 규칙
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+### Firebase Auth 설정 (Console에서 완료된 항목)
+- Google Sign-In: **활성화됨**
+- 승인된 도메인: `localhost`, `krsu0000.github.io` 등록 완료
+
+## Sync Architecture
+
+저장 시 localStorage + Firestore **동시 저장** (듀얼 저장):
+- `savePlanner(data)` → `savePlannerLocal()` + `savePlannerCloud()` (fire-and-forget)
+- `saveWeekPlanner(data)` → `saveWeekLocal()` + `saveWeekCloud()` (fire-and-forget)
+
+로드 시 **localStorage 우선 즉시 렌더 → Firestore에서 최신 데이터로 갱신**:
+1. localStorage 데이터 있으면 즉시 `boot()` (빠른 초기 렌더)
+2. 로그인 상태면 Firestore에서 fetch
+3. `updatedAt` 타임스탬프 비교 → 클라우드가 더 최신이면 재렌더 + localStorage 덮어쓰기
+
+비로그인 상태: localStorage만 사용 (기존 동작과 동일, 하위 호환)
+
+### index.html 추가 기능
+- **Auth bar** (헤더 우상단): 로그인 시 Google 프로필 사진 + 이름 + 로그아웃 버튼. 비로그인 시 "Google로 로그인" 버튼
+- **Sync bar** (헤더 아래): 동기화 상태 표시 (`syncing` → `synced` → 사라짐)
+- 로그인 시 `syncFromCloud()` 호출 → 전체 플래너 목록을 Firestore에서 받아 localStorage에 저장 후 `renderList()`
 
 ## Actual File Structure
 
 ```
 6block/
-├── index.html          # Entry point: lists all planners, "오늘 플래너 열기" / "이번 주 플래너" / "날짜 선택" buttons
+├── index.html          # Entry point: lists all planners, auth UI, sync bar
 ├── planner.html        # Daily planner editor  (?date=YYYY-MM-DD)
 ├── week.html           # Weekly planner editor (?week=YYYY-MM-DD  ← Monday date)
 ├── css/
@@ -112,9 +186,10 @@ All data is persisted in `localStorage`. No backend, no build step.
 ### 공통
 - **No build step** — `index.html`을 브라우저에서 직접 열면 동작 (`file://` 호환)
 - **All JS inlined** — 각 HTML 파일의 `<script>` 태그 안에 모든 로직 포함. ES module 사용 금지
-- **Auto-save** — 모든 입력은 500ms 디바운스 후 `localStorage`에 저장. 별도 저장 버튼 없음
+- **Auto-save** — 모든 입력은 500ms 디바운스 후 localStorage + Firestore에 저장. 별도 저장 버튼 없음
 - **Title editing** — 제목 `<span>` 클릭 시 `<input>`으로 전환, blur 시 `customTitle`에 저장
 - **Korean locale** — 날짜는 `YYYY년 M월 D일 (요일)` 형식. 주간은 `YYYY년 M월 N번째 주`
+- **Auth state** — `auth.onAuthStateChanged(user => { currentUser = user; loadPlanner/loadWeekPlanner(); })` 패턴. 각 페이지 로드 시 인증 상태 확인 후 데이터 로드
 
 ### index.html
 - 월별 그룹 내에서 **주간 플래너가 일간 플래너보다 위**에 표시
@@ -122,6 +197,8 @@ All data is persisted in `localStorage`. No backend, no build step.
 - "이번 주 플래너" 버튼 → 해당 주 월요일 ID로 `week.html?week=YYYY-MM-DD`
 - "오늘 플래너 열기" → `planner.html?date=YYYY-MM-DD`
 - "날짜 선택" 버튼에 hover 툴팁 (버튼 아래쪽 표시, `top: calc(100% + 8px)`)
+- **Auth bar**: `#auth-bar` div — JS로 동적 렌더. 로그인 시 avatar + name + 로그아웃, 비로그인 시 Google 로그인 버튼
+- **Sync bar**: `#sync-bar` div — class `hidden` / `syncing` / `synced` 로 상태 전환
 
 ### planner.html
 - **Grid columns**: `44px 64px 52px 1fr 1fr` (번호/시간/체크박스/할일/메모)
@@ -131,6 +208,7 @@ All data is persisted in `localStorage`. No backend, no build step.
   - `getBlockRowByY(y)`: y좌표 기준으로 nearest block-row 탐지 (divider-row 위에서도 안정)
 - **Block drag**: 핸들(`≡`)에서만 시작. `swapBlockContent()` — id(번호) 제외하고 내용만 교체
 - **Migration**: `migratePlanner()` — 구버전 데이터에 `tasks[]`, `dividers` 필드 추가
+- **Boot flow**: `auth.onAuthStateChanged` → `loadPlanner()` → localStorage 즉시 렌더 → Firestore 갱신
 
 ### week.html
 - **주간 ID**: 해당 주 월요일 날짜 (`getWeekMonday()` 계산)
@@ -141,6 +219,7 @@ All data is persisted in `localStorage`. No backend, no build step.
 - **Block Calc (영역3)**: `cells` 전체를 집계해 텍스트별 count 표시. 총 42칸 - 사용 = 가용블럭
 - **Pre-Check (영역2)**: `preChecks` 배열이 없거나 빈 배열이면 `defaultPreChecks()`로 마이그레이션
 - **Migration guard**: `!weekData.preChecks || weekData.preChecks.length === 0` 조건으로 빈 배열도 처리
+- **Boot flow**: `auth.onAuthStateChanged` → `loadWeekPlanner()` → localStorage 즉시 렌더 → Firestore 갱신
 
 ## CSS Key Points
 
@@ -160,13 +239,19 @@ All data is persisted in `localStorage`. No backend, no build step.
 No dependencies, no build tools required.
 
 ```bash
-# 직접 열기 (권장 — 서버 불필요)
-# index.html을 브라우저에서 더블클릭
-
-# 또는 서버로 실행
+# 로컬 테스트 (Google 로그인은 localhost에서만 동작, file:// 불가)
 npx serve .
 python -m http.server 8080
+# → http://localhost:8080 으로 접속
+
+# 배포
+git add .
+git commit -m "message"
+git push origin main
 ```
+
+> **중요**: Google 로그인은 `file://` 프로토콜에서 동작하지 않음.
+> 로컬 테스트 시 반드시 로컬 서버(`localhost`) 사용.
 
 ## Common Pitfalls
 
@@ -175,3 +260,7 @@ python -m http.server 8080
 - **week.html preChecks 빈 배열 처리**: `!preChecks`만으로는 `[]` 감지 불가 → `length === 0` 조건 추가 필수
 - **colorMap 재구성**: 페이지 새로고침 시 `rebuildColorMap()` 호출 필요 (저장된 color 값으로 복원)
 - **셀 드래그**: `week-cell-input`이 셀 전체를 덮으므로 반드시 별도 핸들 요소에만 mousedown 바인딩
+- **Firebase 도메인 미등록**: 새 도메인에 배포 시 Firebase Console → Authentication → Settings → 승인된 도메인에 추가 필수. 미등록 시 `auth/operation-not-allowed` 오류 발생
+- **Google 로그인 비활성화**: Firebase Console → Authentication → Sign-in method → Google 반드시 활성화
+- **Firestore 규칙**: 테스트 모드 30일 만료 주의. 위의 보안 규칙으로 교체 필수
+- **로컬 file:// 테스트**: Google 로그인 팝업이 `file://`에서 차단됨 → `npx serve .` 또는 `python -m http.server` 사용
