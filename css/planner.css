@@ -1,140 +1,171 @@
-/* ─── 플래너 페이지 레이아웃 ────────────── */
+/* ════════════════════════════════════════════════════
+   planner.css — Material Design 3 Expressive
+   일간 플래너 레이아웃
+════════════════════════════════════════════════════ */
+
+/* ─── 페이지 레이아웃 ───────────────────── */
 .planner-page {
-  max-width: 900px;
+  max-width: 920px;
   margin: 0 auto;
-  padding: 24px 20px 60px;
+  padding: 28px 20px 80px;
 }
 
-/* ─── 헤더 영역 ─────────────────────────── */
+/* ─── 플래너 헤더 ───────────────────────── */
 .planner-header {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
 }
 
+/* M3 Icon Button */
 .back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-muted);
-  font-size: 20px;
-  padding: 4px;
-  line-height: 1;
-  transition: color 0.15s;
+  color: var(--md-on-surface-variant);
+  font-size: 22px;
+  border-radius: var(--shape-full);
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast);
   flex-shrink: 0;
 }
-.back-btn:hover { color: var(--accent); }
+.back-btn:hover {
+  background: color-mix(in srgb, var(--md-primary) 10%, transparent);
+  color: var(--md-primary);
+}
 
 .title-wrap { flex: 1; min-width: 0; }
 
+/* M3 Assist Chip 느낌의 날짜 배지 */
 .day-badge {
-  display: inline-block;
-  background: var(--accent);
-  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  padding: 2px 10px;
-  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 3px 12px;
+  border-radius: var(--shape-full);
   margin-bottom: 4px;
 }
 
+/* 제목 — M3 Headline Medium */
 #planner-title {
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
   cursor: pointer;
   display: inline-block;
+  color: var(--md-on-surface);
   border-bottom: 2px dashed transparent;
-  transition: border-color 0.15s;
+  transition: border-color var(--motion-fast), color var(--motion-fast);
   max-width: 100%;
   word-break: break-all;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
 }
-#planner-title:hover { border-bottom-color: var(--accent); }
+#planner-title:hover {
+  border-bottom-color: var(--md-primary);
+  color: var(--md-primary);
+}
 
 #planner-title-input {
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
   border: none;
-  border-bottom: 2px solid var(--accent);
+  border-bottom: 2px solid var(--md-primary);
   outline: none;
   background: transparent;
   width: 100%;
   font-family: inherit;
-  color: var(--text);
+  color: var(--md-on-surface);
+  letter-spacing: -0.3px;
 }
 
+/* M3 save indicator */
 .save-indicator {
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--md-outline);
   min-width: 60px;
   text-align: right;
+  letter-spacing: 0.1px;
 }
 
-/* ─── 플래너 카드 ─────────────────────── */
+/* ─── 플래너 카드 ───────────────────────── */
+/* M3 Elevated Card */
 .planner-card {
-  background: var(--surface);
-  border-radius: 10px;
-  border: 1.5px solid var(--border-strong);
+  background: var(--md-surface);
+  border-radius: var(--shape-xl);
+  border: 1px solid var(--md-outline-variant);
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: var(--elev-2);
 }
 
-/* ─── 열 헤더 ─────────────────────────── */
+/* ─── 열 헤더 ───────────────────────────── */
+/* M3 Surface Container 느낌 */
 .col-header {
   display: grid;
   grid-template-columns: 44px 64px 52px 1fr 1fr;
-  background: var(--border-strong);
-  color: #fff;
+  background: var(--md-surface-2);
+  border-bottom: 1px solid var(--md-outline-variant);
 }
 .col-header span {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   text-align: center;
-  padding: 5px 8px;
+  padding: 8px 6px;
   text-transform: uppercase;
-  border-right: 1px solid rgba(255,255,255,0.2);
+  color: var(--md-on-surface-variant);
+  border-right: 1px solid var(--md-outline-variant);
 }
 .col-header span:last-child { border-right: none; }
 
-/* ─── 블럭 행 ─────────────────────────── */
+/* ─── 블럭 행 ───────────────────────────── */
 .block-row {
   display: grid;
   grid-template-columns: 44px 64px 52px 1fr 1fr;
-  border-bottom: 1px solid var(--border);
-  min-height: 90px;
+  border-bottom: 1px solid var(--md-outline-variant);
+  min-height: 92px;
   position: relative;
-  transition: background 0.15s, opacity 0.15s;
-  user-select: none; /* 드래그 중 텍스트 선택 방지 */
+  transition:
+    background var(--motion-fast),
+    opacity var(--motion-fast);
+  user-select: none;
 }
 .block-row:last-child { border-bottom: none; }
 
-/* 드래그 중인 블럭 */
+/* 드래그 중 */
 .block-row.dragging {
-  opacity: 0.4;
-  background: #f0f4ff;
+  opacity: 0.35;
+  background: var(--md-primary-container);
 }
-/* 드롭 타겟 위쪽 강조 */
 .block-row.drag-over-top {
-  box-shadow: inset 0 3px 0 0 var(--accent);
+  box-shadow: inset 0 3px 0 0 var(--md-primary);
 }
 .block-row.drag-over-bottom {
-  box-shadow: inset 0 -3px 0 0 var(--accent);
+  box-shadow: inset 0 -3px 0 0 var(--md-primary);
 }
 
-/* ─── 드래그 핸들 ────────────────────── */
+/* ─── 드래그 핸들 ───────────────────────── */
 .drag-handle {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   cursor: grab;
   padding: 6px 4px;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--motion-fast);
   flex-shrink: 0;
 }
 .drag-handle:active { cursor: grabbing; }
@@ -142,44 +173,45 @@
   display: block;
   width: 14px;
   height: 2px;
-  background: var(--text-muted);
-  border-radius: 2px;
+  background: var(--md-outline);
+  border-radius: var(--shape-full);
 }
 .block-row:hover .drag-handle { opacity: 1; }
 
-/* ─── 셀 공통 ─────────────────────────── */
+/* ─── 셀 공통 ───────────────────────────── */
 .block-num,
 .block-time,
 .block-checks,
 .block-task,
 .block-memo {
   padding: 10px;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--md-outline-variant);
 }
 .block-memo { border-right: none; }
 
-/* ─── 번호 셀 ─────────────────────────── */
+/* ─── 번호 셀 ───────────────────────────── */
 .block-num {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  background: #fafafa;
-  padding-top: 10px;
+  background: var(--md-surface-1);
+  padding-top: 12px;
 }
 .block-num-label {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--md-outline);
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ─── 시간 셀 ─────────────────────────── */
+/* ─── 시간 셀 ───────────────────────────── */
 .block-time {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  background: #fafafa;
+  background: var(--md-surface-1);
 }
 .time-input {
   width: 100%;
@@ -187,22 +219,29 @@
   outline: none;
   background: transparent;
   font-size: 12px;
+  font-weight: 500;
   text-align: center;
-  color: var(--text);
+  color: var(--md-on-surface-variant);
   font-family: inherit;
   padding-top: 2px;
 }
-.time-input::placeholder { color: var(--text-muted); font-size: 11px; }
+.time-input::placeholder {
+  color: var(--md-outline);
+  font-size: 11px;
+}
+.time-input:focus {
+  color: var(--md-primary);
+}
 
-/* ─── 체크박스 셀 ─────────────────────── */
+/* ─── 체크박스 셀 ───────────────────────── */
 .block-checks {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-evenly;
   gap: 4px;
-  background: #fafafa;
-  padding: 6px 8px;
+  background: var(--md-surface-1);
+  padding: 8px 6px;
 }
 
 .check-label {
@@ -216,36 +255,42 @@
 .check-label input[type=checkbox] {
   position: absolute;
   opacity: 0;
-  width: 0;
-  height: 0;
+  width: 0; height: 0;
 }
+
+/* M3 Checkbox 스타일 */
 .checkmark {
-  width: 18px;
-  height: 18px;
-  border: 1.5px solid var(--border);
-  border-radius: 3px;
+  width: 20px; height: 20px;
+  border: 2px solid var(--md-outline);
+  border-radius: var(--shape-xs);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    transform var(--motion-fast);
   flex-shrink: 0;
 }
+.check-label:hover .checkmark {
+  border-color: var(--md-primary);
+}
 .check-label input:checked + .checkmark {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--md-primary);
+  border-color: var(--md-primary);
+  transform: scale(1.05);
 }
 .check-label input:checked + .checkmark::after {
   content: '';
   display: block;
-  width: 5px;
-  height: 9px;
-  border: 2px solid #fff;
+  width: 5px; height: 9px;
+  border: 2px solid var(--md-on-primary);
   border-top: none;
   border-left: none;
   transform: rotate(45deg) translate(-1px, -1px);
 }
 
-/* ─── 할 일 셀 ────────────────────────── */
+/* ─── 할 일 셀 ───────────────────────────── */
 .block-task { position: relative; }
 
 .task-lines {
@@ -254,37 +299,37 @@
   gap: 0;
   width: 100%;
 }
-
-/* 할 일 한 줄 = 텍스트만 (취소선은 왼쪽 checks[]와 연동) */
 .task-line {
   display: flex;
   align-items: flex-start;
   padding: 2px 0;
 }
-
 .task-line-text {
   flex: 1;
   border: none;
   outline: none;
   background: transparent;
   font-size: 14px;
+  font-weight: 400;
   font-family: inherit;
-  color: var(--text);
+  color: var(--md-on-surface);
   resize: none;
   overflow: hidden;
   min-height: 24px;
   line-height: 1.65;
   padding: 0;
 }
-.task-line-text::placeholder { color: #bbb; font-size: 13px; }
+.task-line-text::placeholder {
+  color: var(--md-outline-variant);
+  font-size: 13px;
+}
 .task-line-text.done {
   text-decoration: line-through;
-  color: var(--text-muted);
-  opacity: 0.65;
+  color: var(--md-outline);
+  opacity: 0.7;
 }
 
-/* ─── 메모 셀 ─────────────────────────── */
-.block-memo {}
+/* ─── 메모 셀 ───────────────────────────── */
 .memo-input {
   width: 100%;
   border: none;
@@ -292,81 +337,97 @@
   background: transparent;
   font-size: 14px;
   font-family: inherit;
-  color: var(--text);
+  color: var(--md-on-surface-variant);
   resize: none;
   overflow: hidden;
-  min-height: 70px;
+  min-height: 72px;
   line-height: 1.6;
 }
-.memo-input::placeholder { color: #bbb; font-size: 13px; }
+.memo-input::placeholder {
+  color: var(--md-outline-variant);
+  font-size: 13px;
+}
 
-/* ─── 기준 라인 구분선 ────────────────── */
+/* ─── 기준 라인 (점심/저녁) ─────────────── */
 .divider-row {
-  /* height:0 금지 — 실제 높이를 가져야 pointer-events 작동 */
   position: relative;
   width: 100%;
-  height: 20px;           /* 클릭 가능 영역 확보 */
+  height: 22px;
   display: flex;
   align-items: center;
   cursor: ns-resize;
   z-index: 5;
   user-select: none;
 }
-.divider-row:hover .divider-line { background: var(--accent); }
-.divider-row:hover .divider-label { background: var(--accent); }
+.divider-row:hover .divider-line {
+  background: var(--md-primary);
+  height: 5px;
+}
+.divider-row:hover .divider-label {
+  background: var(--md-primary);
+}
 
 .divider-line {
   width: 100%;
-  height: 4px;
-  background: var(--border-strong);
+  height: 3px;
+  background: var(--md-on-surface);
   position: relative;
-  pointer-events: none;   /* 클릭은 부모 .divider-row에서 처리 */
-  transition: background 0.15s;
+  pointer-events: none;
+  transition:
+    background var(--motion-fast),
+    height var(--motion-fast);
+  opacity: 0.85;
 }
 
 .divider-label {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 1px;
-  color: #fff;
-  background: var(--border-strong);
-  padding: 1px 8px;
-  border-radius: 3px;
+  color: var(--md-on-primary);
+  background: var(--md-on-surface);
+  padding: 1px 9px;
+  border-radius: var(--shape-full);
   pointer-events: none;
-  transition: background 0.15s;
+  transition: background var(--motion-fast);
   white-space: nowrap;
+  opacity: 0.85;
 }
 
-/* ─── 푸터 ────────────────────────────── */
+/* ─── 푸터 ───────────────────────────────── */
+/* M3 Surface Variant 배경 */
 .planner-footer {
-  border-top: 2px solid var(--border-strong);
+  border-top: 2px solid var(--md-on-surface);
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: auto auto auto;
+  background: color-mix(in srgb, var(--md-surface-1) 60%, var(--md-surface));
 }
 .footer-memo {
   grid-column: 1;
   grid-row: 1 / 4;
-  border-right: 1px solid var(--border);
-  padding: 14px;
+  border-right: 1px solid var(--md-outline-variant);
+  padding: 16px;
 }
 .footer-section {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--md-outline-variant);
 }
 .footer-section:last-child { border-bottom: none; }
+
+/* M3 Label Large */
 .footer-label {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.8px;
-  color: var(--text-muted);
-  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--md-on-surface-variant);
+  margin-bottom: 5px;
   text-transform: uppercase;
 }
+
 .footer-textarea {
   width: 100%;
   border: none;
@@ -374,10 +435,12 @@
   background: transparent;
   font-size: 13px;
   font-family: inherit;
-  color: var(--text);
+  color: var(--md-on-surface);
   resize: none;
   overflow: hidden;
   min-height: 40px;
-  line-height: 1.6;
+  line-height: 1.65;
 }
-.footer-textarea::placeholder { color: #bbb; }
+.footer-textarea::placeholder {
+  color: var(--md-outline-variant);
+}

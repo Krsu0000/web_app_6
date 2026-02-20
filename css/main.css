@@ -1,53 +1,169 @@
+/* ════════════════════════════════════════════════════
+   Material Design 3 Expressive — 공통 디자인 시스템
+   Palette: Deep Orange 기반 → M3 토큰으로 매핑
+════════════════════════════════════════════════════ */
+
+/* ── Google Fonts: Noto Sans KR + M3 전용 ── */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+
 :root {
-  --accent: #e8500a;
-  --accent-light: #fff1eb;
-  --text: #1a1a1a;
-  --text-muted: #888;
-  --border: #d0d0d0;
-  --border-strong: #1a1a1a;
-  --bg: #f5f5f5;
-  --surface: #ffffff;
-  --radius: 6px;
-  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  /* ── Primary (Deep Orange) ── */
+  --md-primary:           #B94400;   /* on-surface 위에 쓰는 브랜드색 */
+  --md-on-primary:        #FFFFFF;
+  --md-primary-container: #FFDBCC;   /* 연한 컨테이너 */
+  --md-on-primary-container: #3A1100;
+
+  /* ── Secondary ── */
+  --md-secondary:           #77574A;
+  --md-on-secondary:        #FFFFFF;
+  --md-secondary-container: #FFDBD1;
+  --md-on-secondary-container: #2C160D;
+
+  /* ── Tertiary (보조 강조 — 파랑 계열) ── */
+  --md-tertiary:           #4A6CE0;
+  --md-on-tertiary:        #FFFFFF;
+  --md-tertiary-container: #DCE1FF;
+  --md-on-tertiary-container: #001161;
+
+  /* ── Surface ── */
+  --md-background:    #FFF8F6;
+  --md-surface:       #FFFBFF;
+  --md-surface-1:     #FEF1EC;   /* elevation 1 — tonal surface */
+  --md-surface-2:     #FDE8E0;   /* elevation 2 */
+  --md-on-surface:    #201A18;
+  --md-on-surface-variant: #53433E;
+
+  /* ── Outline ── */
+  --md-outline:       #857370;
+  --md-outline-variant: #D8C2BC;
+
+  /* ── Error ── */
+  --md-error:          #BA1A1A;
+  --md-error-container:#FFDAD6;
+
+  /* ── Shape (M3 Expressive = 풍성한 곡선) ── */
+  --shape-xs:   4px;
+  --shape-sm:   8px;
+  --shape-md:  12px;
+  --shape-lg:  16px;
+  --shape-xl:  24px;
+  --shape-full:9999px;
+
+  /* ── Elevation Shadow ── */
+  --elev-1: 0 1px 2px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.07);
+  --elev-2: 0 1px 2px rgba(0,0,0,0.06), 0 3px 10px rgba(0,0,0,0.10);
+  --elev-3: 0 2px 4px rgba(0,0,0,0.06), 0 6px 18px rgba(0,0,0,0.12);
+
+  /* ── Transition ── */
+  --motion-std: 250ms cubic-bezier(0.2, 0, 0, 1);
+  --motion-fast: 150ms cubic-bezier(0.2, 0, 0, 1);
+
+  /* ── 레거시 토큰 호환 (기존 코드 유지) ── */
+  --accent:        var(--md-primary);
+  --accent-light:  var(--md-primary-container);
+  --text:          var(--md-on-surface);
+  --text-muted:    var(--md-on-surface-variant);
+  --border:        var(--md-outline-variant);
+  --border-strong: var(--md-on-surface);
+  --bg:            var(--md-background);
+  --surface:       var(--md-surface);
+  --radius:        var(--shape-md);
+  --shadow:        var(--elev-2);
 }
 
+/* ─── 리셋 ─────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+  background: var(--md-background);
+  color: var(--md-on-surface);
   min-height: 100vh;
   font-size: 15px;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── 공통 헤더 ─────────────────────────── */
+/* ─── 공통 앱 헤더 ─────────────────────── */
+/* M3: Top App Bar — Medium 스타일 */
 .app-header {
-  background: var(--accent);
-  color: #fff;
-  padding: 0 20px;
-  height: 52px;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  padding: 0 16px;
+  height: 64px;
   display: flex;
   align-items: center;
   gap: 12px;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  /* M3 Surface+tonal elevation */
+  border-bottom: 1px solid var(--md-outline-variant);
+  box-shadow: none; /* M3은 Top bar에 shadow 쓰지 않음 */
 }
 
 .app-header .logo {
   font-weight: 800;
-  font-size: 17px;
-  letter-spacing: -0.3px;
+  font-size: 20px;
+  letter-spacing: -0.5px;
   text-decoration: none;
-  color: #fff;
+  color: var(--md-primary);
+  /* M3 Expressive: Display 폰트 느낌의 로고 */
+  font-variant-numeric: tabular-nums;
 }
 
 .app-header .spacer { flex: 1; }
 
-/* ─── 툴팁 ────────────────────────────── */
+/* ── Auth bar (헤더 우측) ── */
+.auth-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auth-bar .user-avatar {
+  width: 32px; height: 32px;
+  border-radius: var(--shape-full);
+  object-fit: cover;
+  border: 2px solid var(--md-primary-container);
+}
+.auth-bar .user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--md-on-surface-variant);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Sync bar ── */
+#sync-bar {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 16px;
+  background: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  transition: opacity var(--motion-std);
+}
+#sync-bar.syncing { display: flex; }
+#sync-bar.synced  { display: flex; opacity: 0; pointer-events: none; }
+#sync-bar .sync-dot {
+  width: 7px; height: 7px;
+  border-radius: var(--shape-full);
+  background: var(--md-tertiary);
+  animation: sync-pulse 1.2s ease-in-out infinite;
+}
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* ─── 툴팁 ─────────────────────────────── */
 .tooltip-wrap {
   position: relative;
   display: inline-flex;
@@ -57,15 +173,15 @@ body {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  background: #2a2a2a;
-  color: #fff;
+  background: var(--md-on-surface);
+  color: var(--md-surface);
   font-size: 12px;
   line-height: 1.6;
-  padding: 9px 12px;
-  border-radius: 6px;
+  padding: 10px 14px;
+  border-radius: var(--shape-lg);
   pointer-events: none;
   z-index: 200;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: var(--elev-3);
   min-width: 280px;
   white-space: normal;
   text-align: left;
@@ -76,176 +192,268 @@ body {
   bottom: 100%;
   right: 16px;
   border: 6px solid transparent;
-  border-bottom-color: #2a2a2a;
+  border-bottom-color: var(--md-on-surface);
 }
-.tooltip-wrap:hover .tooltip-box {
-  display: block;
-}
+.tooltip-wrap:hover .tooltip-box { display: block; }
 
-/* ─── 버튼 ────────────────────────────── */
+/* ─── 버튼 시스템 ───────────────────────── */
+/* M3 Button — Filled / Outlined / Text / Ghost */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 7px 14px;
-  border-radius: var(--radius);
+  padding: 10px 20px;
+  border-radius: var(--shape-full); /* M3 = pill shape */
   border: none;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  transition: background 0.15s, opacity 0.15s;
+  font-family: inherit;
+  letter-spacing: 0.1px;
+  transition:
+    background var(--motion-fast),
+    box-shadow var(--motion-fast),
+    opacity var(--motion-fast);
+  white-space: nowrap;
 }
 
+/* Filled Button */
 .btn-primary {
-  background: var(--accent);
-  color: #fff;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  box-shadow: var(--elev-1);
 }
-.btn-primary:hover { background: #c94008; }
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--md-primary) 92%, black);
+  box-shadow: var(--elev-2);
+}
+.btn-primary:active {
+  box-shadow: none;
+  opacity: 0.9;
+}
 
+/* Outlined Button */
 .btn-outline {
-  background: #fff;
-  color: var(--accent);
-  border: 1.5px solid var(--accent);
-}
-.btn-outline:hover { background: var(--accent-light); }
-
-.btn-ghost {
   background: transparent;
-  color: #fff;
-  border: 1.5px solid rgba(255,255,255,0.6);
-  padding: 5px 12px;
+  color: var(--md-primary);
+  border: 1.5px solid var(--md-outline);
+}
+.btn-outline:hover {
+  background: color-mix(in srgb, var(--md-primary) 8%, transparent);
+  border-color: var(--md-primary);
+}
+
+/* Tonal Button (헤더용) */
+.btn-ghost {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border: none;
+  padding: 8px 16px;
   font-size: 13px;
 }
-.btn-ghost:hover { background: rgba(255,255,255,0.15); }
+.btn-ghost:hover {
+  background: color-mix(in srgb, var(--md-primary-container) 88%, var(--md-primary));
+}
 
-/* ─── 인덱스 레이아웃 ─────────────────── */
+/* Sign-in 버튼 */
+.btn-signin {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  padding: 8px 18px;
+  font-size: 13px;
+  border-radius: var(--shape-full);
+  box-shadow: var(--elev-1);
+}
+.btn-signin:hover {
+  box-shadow: var(--elev-2);
+  background: color-mix(in srgb, var(--md-primary) 92%, black);
+}
+
+.btn-signout {
+  background: var(--md-surface-1);
+  color: var(--md-on-surface-variant);
+  border: 1px solid var(--md-outline-variant);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--shape-full);
+}
+.btn-signout:hover {
+  background: var(--md-error-container);
+  color: var(--md-error);
+  border-color: var(--md-error);
+}
+
+/* ─── 인덱스 레이아웃 ───────────────────── */
 .index-container {
   max-width: 680px;
   margin: 0 auto;
-  padding: 28px 20px 60px;
+  padding: 32px 20px 80px;
 }
 
+/* ── Hero 영역 ── */
 .index-hero {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 28px;
-  gap: 12px;
+  margin-bottom: 32px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
 .index-hero h1 {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
+  color: var(--md-on-surface);
+  letter-spacing: -0.5px;
+  line-height: 1.25;
+}
+.index-hero h1 span {
+  color: var(--md-primary);
 }
 
-.hero-actions { display: flex; gap: 10px; }
+.hero-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
-/* ─── 플래너 목록 ─────────────────────── */
-.month-group { margin-bottom: 28px; }
+/* ── 월 그룹 라벨 ── */
+.month-group { margin-bottom: 32px; }
 
 .month-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--md-on-surface-variant);
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  padding: 0 4px 8px;
   margin-bottom: 8px;
+  border-bottom: 1px solid var(--md-outline-variant);
 }
 
+/* ── 플래너 목록 아이템 ── */
+/* M3 Card — Filled style */
 .planner-item {
   display: flex;
   align-items: center;
-  background: var(--surface);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  margin-bottom: 6px;
+  background: var(--md-surface);
+  border-radius: var(--shape-lg);
+  border: 1px solid var(--md-outline-variant);
+  margin-bottom: 8px;
   overflow: hidden;
-  transition: box-shadow 0.15s;
+  transition:
+    box-shadow var(--motion-fast),
+    background var(--motion-fast);
 }
-.planner-item:hover { box-shadow: var(--shadow); }
-.planner-item.is-today { border-color: var(--accent); }
+.planner-item:hover {
+  box-shadow: var(--elev-2);
+  background: var(--md-surface-1);
+}
+.planner-item.is-today {
+  border-color: var(--md-primary);
+  border-width: 2px;
+  background: color-mix(in srgb, var(--md-primary-container) 40%, var(--md-surface));
+}
 
 .item-link {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 13px 16px;
+  gap: 14px;
+  padding: 14px 18px;
   background: none;
   border: none;
   cursor: pointer;
   text-align: left;
-  color: var(--text);
+  color: var(--md-on-surface);
 }
 
 .item-date {
   font-size: 13px;
   font-weight: 700;
-  color: var(--accent);
-  min-width: 60px;
+  color: var(--md-primary);
+  min-width: 58px;
+  font-variant-numeric: tabular-nums;
 }
 
 .item-title {
   font-size: 14px;
+  font-weight: 500;
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--md-on-surface);
 }
 
+/* M3 Chip — "오늘" 배지 */
 .badge-today {
   font-size: 11px;
   font-weight: 700;
-  background: var(--accent);
-  color: #fff;
-  padding: 2px 8px;
-  border-radius: 20px;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  padding: 3px 10px;
+  border-radius: var(--shape-full);
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
 }
 
 .item-delete {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 13px 14px;
-  color: var(--text-muted);
-  font-size: 13px;
-  transition: color 0.15s;
+  padding: 14px 16px;
+  color: var(--md-outline);
+  font-size: 14px;
+  transition: color var(--motion-fast), background var(--motion-fast);
+  border-radius: 0 var(--shape-lg) var(--shape-lg) 0;
 }
-.item-delete:hover { color: #e03030; }
+.item-delete:hover {
+  color: var(--md-error);
+  background: var(--md-error-container);
+}
 
-/* ─── 주간 아이템 배지 ───────────────── */
+/* ── 주간 아이템 (Tertiary 테마) ── */
 .item-type-badge {
   font-size: 10px;
-  font-weight: 800;
-  background: #4a7ce0;
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 4px;
+  font-weight: 700;
+  background: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  padding: 3px 9px;
+  border-radius: var(--shape-sm);
   letter-spacing: 0.3px;
   flex-shrink: 0;
 }
 .week-item {
-  background: #f8faff;
+  background: color-mix(in srgb, var(--md-tertiary-container) 25%, var(--md-surface));
+  border-color: color-mix(in srgb, var(--md-tertiary-container) 80%, var(--md-outline-variant));
 }
 .week-item.is-today {
-  border-color: #4a7ce0;
+  border-color: var(--md-tertiary);
+  border-width: 2px;
 }
-.week-item .item-date {
-  color: #4a7ce0;
-}
+.week-item .item-date { color: var(--md-tertiary); }
 .week-item .badge-today {
-  background: #4a7ce0;
+  background: var(--md-tertiary);
+  color: var(--md-on-tertiary);
 }
 
-/* ─── 빈 상태 ─────────────────────────── */
+/* ── 빈 상태 ── */
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
-  color: var(--text-muted);
+  padding: 72px 24px;
+  color: var(--md-on-surface-variant);
 }
-.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-state p { font-size: 15px; }
-.empty-state .empty-hint { font-size: 13px; margin-top: 6px; }
+.empty-state .empty-icon {
+  font-size: 52px;
+  margin-bottom: 16px;
+  display: block;
+}
+.empty-state p { font-size: 16px; font-weight: 500; }
+.empty-state .empty-hint {
+  font-size: 13px;
+  margin-top: 6px;
+  color: var(--md-outline);
+}
