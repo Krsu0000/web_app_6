@@ -3,8 +3,11 @@
    Palette: Deep Orange 기반 → M3 토큰으로 매핑
 ════════════════════════════════════════════════════ */
 
-/* ── Google Fonts: Noto Sans KR + M3 전용 ── */
+/* ── Google Fonts: Noto Sans KR (본문용) ── */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+
+/* ── SUIT Variable (UI 크롬 전용 — 버튼·타이틀·헤딩) ── */
+@import url('https://cdn.jsdelivr.net/gh/sunn-us/SUIT@1.0/packages/variable/SUIT-Variable.css');
 
 :root {
   /* ── Primary (Deep Orange) ── */
@@ -58,6 +61,10 @@
   --motion-std: 250ms cubic-bezier(0.2, 0, 0, 1);
   --motion-fast: 150ms cubic-bezier(0.2, 0, 0, 1);
 
+  /* ── Font ── */
+  --font-body: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  --font-ui:   'SUIT Variable', 'Noto Sans KR', sans-serif;
+
   /* ── 레거시 토큰 호환 (기존 코드 유지) ── */
   --accent:        var(--md-primary);
   --accent-light:  var(--md-primary-container);
@@ -75,7 +82,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+  font-family: var(--font-body);
   background: var(--md-background);
   color: var(--md-on-surface);
   min-height: 100vh;
@@ -83,6 +90,44 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── SUIT: UI 크롬 요소 전용 ─────────────
+   본문(task·memo·footer 텍스트)은 Noto 유지
+──────────────────────────────────────────── */
+.app-header .logo,
+.btn,
+.index-hero h1,
+.month-label,
+.item-date,
+.item-title,
+.item-type-badge,
+.badge-today,
+#planner-title,
+#planner-title-input,
+.day-badge,
+.col-header span,
+.footer-label,
+.block-num-label,
+.time-input,
+.save-indicator {
+  font-family: var(--font-ui);
+  font-weight: 600;
+}
+
+/* 더 굵게 — 주요 헤딩/배지 */
+.index-hero h1,
+.month-label,
+#planner-title,
+.day-badge,
+.footer-label,
+.block-num-label {
+  font-weight: 700;
+}
+
+/* 최강조 — 로고 */
+.app-header .logo {
+  font-weight: 800;
 }
 
 /* ─── 공통 앱 헤더 ─────────────────────── */
