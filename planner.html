@@ -657,9 +657,11 @@ function renderBlocks() {
     });
   });
 
-  // 모든 행이 DOM에 삽입된 후 textarea 높이 일괄 재계산
-  // (삽입 전에 호출하면 scrollHeight=0 → 텍스트 잘림 버그)
-  blocksWrap.querySelectorAll('.task-line-text, .memo-input').forEach(autoResize);
+  // 모든 행이 DOM에 삽입된 후, 다음 프레임에서 높이 일괄 재계산
+  // requestAnimationFrame: 브라우저가 레이아웃(폭)을 확정한 뒤 scrollHeight 측정
+  requestAnimationFrame(() => {
+    blocksWrap.querySelectorAll('.task-line-text, .memo-input').forEach(autoResize);
+  });
 }
 
 /* ════════════════════════════════════════════════════════════

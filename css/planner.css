@@ -291,7 +291,11 @@
 }
 
 /* ─── 할 일 셀 ───────────────────────────── */
-.block-task { position: relative; }
+.block-task {
+  position: relative;
+  overflow: hidden;   /* 그리드 셀 밖으로 넘침 방지 */
+  min-width: 0;       /* 그리드 아이템이 셀 폭 이내로 축소되도록 */
+}
 
 .task-lines {
   display: flex;
@@ -304,10 +308,9 @@
   align-items: flex-start;
   gap: 8px;
   padding: 3px 0;
+  min-width: 0;       /* flex 자식 축소 허용 */
+  width: 100%;
 }
-/* 체크박스가 텍스트 첫 줄 높이에 광학적으로 맞도록
-   width: 100%를 auto로 덮어쓰지 않으면 check-label이
-   task-line 전체 너비를 차지해서 textarea가 안 보임 */
 .task-line .check-label {
   flex-shrink: 0;
   width: auto;
@@ -315,6 +318,8 @@
 }
 .task-line-text {
   flex: 1;
+  min-width: 0;       /* ★ flex 아이템 핵심: 콘텐츠 폭 이하로 축소 허용 */
+  width: 0;           /* ★ flex-grow만으로 폭 결정 (콘텐츠 기반 X) */
   border: none;
   outline: none;
   background: transparent;
