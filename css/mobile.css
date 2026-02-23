@@ -17,6 +17,20 @@
   .index-hero h1 { font-size: 20px; }
   .btn { font-size: 13px; padding: 8px 16px; }
 
+  /* 히어로 버튼 — 줄바꿈 없이 한 줄에 유동 크기 */
+  .hero-actions {
+    flex-wrap: nowrap;
+    gap: 5px;
+    width: 100%;
+  }
+  .hero-actions .btn {
+    flex: 1;
+    justify-content: center;
+    font-size: clamp(10px, 2.8vw, 13px);
+    padding: 8px clamp(5px, 2vw, 14px);
+    letter-spacing: 0;
+  }
+
   /* ─── 플래너 페이지 ──────────────────── */
   .planner-page { padding: 16px 10px 64px; }
   #planner-title { font-size: 18px; }

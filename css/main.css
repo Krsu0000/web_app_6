@@ -108,7 +108,7 @@ body {
   font-size: 20px;
   letter-spacing: -0.5px;
   text-decoration: none;
-  color: var(--md-primary);
+  color: #D4A898;  /* 배경과 유사한 웜 뮤트 색 — 주황보다 부드럽게 */
   /* M3 Expressive: Display 폰트 느낌의 로고 */
   font-variant-numeric: tabular-nums;
 }
@@ -235,7 +235,7 @@ body {
 
 /* Outlined Button */
 .btn-outline {
-  background: transparent;
+  background: #FDF7F4;  /* 크림 화이트 배경 */
   color: var(--md-primary);
   border: 1.5px solid var(--md-outline);
 }
@@ -338,7 +338,7 @@ body {
 .planner-item {
   display: flex;
   align-items: center;
-  background: var(--md-surface);
+  background: #EDEAE8;  /* 저채도 고명도 — 비현재 아이템 덜 눈에 띄도록 */
   border-radius: var(--shape-lg);
   border: 1px solid var(--md-outline-variant);
   margin-bottom: 8px;
@@ -354,7 +354,7 @@ body {
 .planner-item.is-today {
   border-color: var(--md-primary);
   border-width: 2px;
-  background: color-mix(in srgb, var(--md-primary-container) 40%, var(--md-surface));
+  background: #FFFFFF;  /* 현재(오늘) 아이템은 순백으로 강조 */
 }
 
 .item-link {
@@ -427,12 +427,13 @@ body {
   flex-shrink: 0;
 }
 .week-item {
-  background: color-mix(in srgb, var(--md-tertiary-container) 25%, var(--md-surface));
-  border-color: color-mix(in srgb, var(--md-tertiary-container) 80%, var(--md-outline-variant));
+  background: #ECEAED;  /* 저채도 고명도 — 비현재 주간 아이템 */
+  border-color: #D6D4D8;
 }
 .week-item.is-today {
   border-color: var(--md-tertiary);
   border-width: 2px;
+  background: #FFFFFF;  /* 이번 주 아이템은 순백으로 강조 */
 }
 .week-item .item-date { color: var(--md-tertiary); }
 .week-item .badge-today {
