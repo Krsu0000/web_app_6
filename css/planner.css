@@ -113,7 +113,7 @@
 /* M3 Surface Container 느낌 */
 .col-header {
   display: grid;
-  grid-template-columns: 44px 64px 52px 1fr 1fr;
+  grid-template-columns: 44px 64px 1fr 1fr;
   background: var(--md-surface-2);
   border-bottom: 1px solid var(--md-outline-variant);
 }
@@ -132,7 +132,7 @@
 /* ─── 블럭 행 ───────────────────────────── */
 .block-row {
   display: grid;
-  grid-template-columns: 44px 64px 52px 1fr 1fr;
+  grid-template-columns: 44px 64px 1fr 1fr;
   border-bottom: 1px solid var(--md-outline-variant);
   min-height: 92px;
   position: relative;
@@ -302,7 +302,13 @@
 .task-line {
   display: flex;
   align-items: flex-start;
-  padding: 2px 0;
+  gap: 8px;
+  padding: 3px 0;
+}
+/* 체크박스가 텍스트 첫 줄 높이에 광학적으로 맞도록 */
+.task-line .check-label {
+  flex-shrink: 0;
+  padding-top: 2px;
 }
 .task-line-text {
   flex: 1;

@@ -26,13 +26,13 @@
   .col-header { display: none; }
 
   /* ─── 블럭 행: 모바일 레이아웃 ───────────
-     row1: [번호+드래그] [시간]
-     row2: [번호+드래그] [할일 + 체크박스 inline]
-     row3: [전체 가로] 메모
+     col: 번호(36px) | 내용(1fr)
+     row1: 번호    | 시간
+     row2: 번호    | 할일 (체크박스 inline으로 포함)
+     row3: 메모 (전체 너비)
   ─────────────────────────────────────── */
   .block-row {
-    /* 열: 번호(36px) + 체크(32px) + 할일(1fr) */
-    grid-template-columns: 36px 32px 1fr;
+    grid-template-columns: 36px 1fr;
     grid-template-rows: auto auto auto;
     min-height: unset;
     padding-bottom: 0;
@@ -50,9 +50,9 @@
   }
   .drag-handle { opacity: 1; }
 
-  /* 시간 셀: 1행, 2~3열 */
+  /* 시간 셀: 1행, 2열 */
   .block-time {
-    grid-column: 2 / 4;
+    grid-column: 2;
     grid-row: 1;
     border-right: none;
     padding: 8px 12px 2px;
@@ -66,32 +66,19 @@
     color: var(--md-primary);
   }
 
-  /* 체크박스: 2행, 2열 — 할 일 바로 왼쪽 */
-  .block-checks {
+  /* 할 일: 2행, 2열 — 체크박스가 inline으로 각 줄 앞에 붙음 */
+  .block-task {
     grid-column: 2;
     grid-row: 2;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    padding: 4px 2px 6px;
-    gap: 11px;
-    background: transparent;
     border-right: none;
-  }
-  .checkmark { width: 20px; height: 20px; }
-
-  /* 할 일: 2행, 3열 */
-  .block-task {
-    grid-column: 3;
-    grid-row: 2;
-    border-right: none;
-    padding: 4px 12px 6px;
+    padding: 4px 12px 8px;
   }
   .task-line-text { font-size: 14px; }
+  .checkmark { width: 20px; height: 20px; }
 
   /* 메모: 3행, 전체 너비 */
   .block-memo {
-    grid-column: 1 / 4;
+    grid-column: 1 / 3;
     grid-row: 3;
     padding: 6px 12px 12px;
     border-top: 1px dashed var(--md-outline-variant);

@@ -41,7 +41,6 @@
       <div class="col-header">
         <span>#</span>
         <span>시간</span>
-        <span>✓</span>
         <span>할 일</span>
         <span>메모</span>
       </div>
@@ -330,6 +329,19 @@ function buildTaskLines(block, taskDiv) {
     const line = document.createElement('div');
     line.className = 'task-line';
 
+    // 체크박스를 task-line 안에 포함 → 항상 같은 줄 정렬 보장
+    const label = document.createElement('label');
+    label.className = 'check-label';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = block.checks[idx];
+    cb.addEventListener('change', () => syncCheckToTask(block, idx, cb.checked, taskDiv));
+    const mark = document.createElement('span');
+    mark.className = 'checkmark';
+    label.appendChild(cb);
+    label.appendChild(mark);
+    line.appendChild(label);
+
     const ta = document.createElement('textarea');
     ta.className = 'task-line-text' + (block.checks[idx] ? ' done' : '');
     ta.value = taskObj.text;
@@ -607,7 +619,7 @@ function renderBlocks() {
     const timeInput = document.createElement('input');
     timeInput.className = 'time-input';
     timeInput.type = 'text';
-    timeInput.placeholder = '시간';
+    timeInput.placeholder = '';
     timeInput.maxLength = 10;
     timeInput.value = block.timeLabel;
     timeInput.addEventListener('input', () => { block.timeLabel = timeInput.value; scheduleSave(); });
@@ -615,22 +627,6 @@ function renderBlocks() {
 
     const taskDiv = document.createElement('div');
     taskDiv.className = 'block-task';
-
-    const checksDiv = document.createElement('div');
-    checksDiv.className = 'block-checks';
-    block.checks.forEach((checked, ci) => {
-      const label = document.createElement('label');
-      label.className = 'check-label';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = checked;
-      cb.addEventListener('change', () => syncCheckToTask(block, ci, cb.checked, taskDiv));
-      const mark = document.createElement('span');
-      mark.className = 'checkmark';
-      label.appendChild(cb);
-      label.appendChild(mark);
-      checksDiv.appendChild(label);
-    });
 
     rebuildTaskLines(block, taskDiv);
 
@@ -646,7 +642,6 @@ function renderBlocks() {
 
     row.appendChild(numDiv);
     row.appendChild(timeDiv);
-    row.appendChild(checksDiv);
     row.appendChild(taskDiv);
     row.appendChild(memoDiv);
     blocksWrap.appendChild(row);
