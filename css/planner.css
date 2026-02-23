@@ -187,7 +187,7 @@
   padding: 10px;
   border-right: 1px solid var(--md-outline-variant);
 }
-.block-memo { border-right: none; }
+.block-memo { border-right: none; min-width: 0; }
 
 /* ─── 번호 셀 ───────────────────────────── */
 .block-num {
@@ -293,7 +293,6 @@
 /* ─── 할 일 셀 ───────────────────────────── */
 .block-task {
   position: relative;
-  overflow: hidden;   /* 그리드 셀 밖으로 넘침 방지 */
   min-width: 0;       /* 그리드 아이템이 셀 폭 이내로 축소되도록 */
 }
 
@@ -303,23 +302,23 @@
   gap: 0;
   width: 100%;
 }
+
+/* ★ CSS Grid으로 체크박스-textarea 폭 확정 (flex에서 변경) */
 .task-line {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto 1fr;
   gap: 8px;
+  align-items: start;
   padding: 3px 0;
-  min-width: 0;       /* flex 자식 축소 허용 */
-  width: 100%;
 }
 .task-line .check-label {
-  flex-shrink: 0;
   width: auto;
   padding-top: 2px;
 }
 .task-line-text {
-  flex: 1;
-  min-width: 0;       /* ★ flex 아이템 핵심: 콘텐츠 폭 이하로 축소 허용 */
-  width: 0;           /* ★ flex-grow만으로 폭 결정 (콘텐츠 기반 X) */
+  display: block;
+  width: 100%;
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
@@ -329,6 +328,8 @@
   color: var(--md-on-surface);
   resize: none;
   overflow: hidden;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
   min-height: 24px;
   line-height: 1.65;
   padding: 0;
@@ -346,6 +347,7 @@
 /* ─── 메모 셀 ───────────────────────────── */
 .memo-input {
   width: 100%;
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
@@ -354,6 +356,8 @@
   color: var(--md-on-surface-variant);
   resize: none;
   overflow: hidden;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
   min-height: 72px;
   line-height: 1.6;
 }

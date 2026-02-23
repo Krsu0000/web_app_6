@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="6Block">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/planner.css">
-  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/main.css?v=11">
+  <link rel="stylesheet" href="css/planner.css?v=11">
+  <link rel="stylesheet" href="css/mobile.css?v=11">
 </head>
 <body>
 
@@ -346,6 +346,7 @@ function buildTaskLines(block, taskDiv) {
     ta.className = 'task-line-text' + (block.checks[idx] ? ' done' : '');
     ta.value = taskObj.text;
     ta.rows = 1;
+    ta.cols = 1;   // intrinsic width 최소화 → Grid 1fr이 실제 폭 결정
     ta.placeholder = idx === 0 ? '할 일을 입력하세요...' : '';
 
     ta.addEventListener('input', () => {
@@ -657,10 +658,12 @@ function renderBlocks() {
     });
   });
 
-  // 모든 행이 DOM에 삽입된 후, 다음 프레임에서 높이 일괄 재계산
-  // requestAnimationFrame: 브라우저가 레이아웃(폭)을 확정한 뒤 scrollHeight 측정
+  // 모든 행이 DOM에 삽입된 후, 두 번째 프레임에서 높이 일괄 재계산
+  // double rAF: 1차 프레임에서 Grid/레이아웃 확정 → 2차 프레임에서 scrollHeight 안정
   requestAnimationFrame(() => {
-    blocksWrap.querySelectorAll('.task-line-text, .memo-input').forEach(autoResize);
+    requestAnimationFrame(() => {
+      blocksWrap.querySelectorAll('.task-line-text, .memo-input').forEach(autoResize);
+    });
   });
 }
 
