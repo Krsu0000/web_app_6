@@ -26,16 +26,16 @@
   --md-on-tertiary-container: #001161;
 
   /* ── Surface ── */
-  --md-background:    #FFF8F6;
-  --md-surface:       #FFFBFF;
-  --md-surface-1:     #FEF1EC;   /* elevation 1 — tonal surface */
-  --md-surface-2:     #FDE8E0;   /* elevation 2 */
+  --md-background:    #FAF9F9;   /* 중성 크림 화이트 */
+  --md-surface:       #FAFAFA;
+  --md-surface-1:     #F4F3F3;   /* elevation 1 */
+  --md-surface-2:     #EDECEC;   /* elevation 2 */
   --md-on-surface:    #201A18;
   --md-on-surface-variant: #53433E;
 
   /* ── Outline ── */
-  --md-outline:       #857370;
-  --md-outline-variant: #D8C2BC;
+  --md-outline:       #8A8280;
+  --md-outline-variant: #D9D6D5;
 
   /* ── Error ── */
   --md-error:          #BA1A1A;
@@ -235,9 +235,9 @@ body {
 
 /* Outlined Button */
 .btn-outline {
-  background: #FDF7F4;  /* 크림 화이트 배경 */
+  background: #FFFFFF;             /* 배경보다 밝은 흰색 → 명확히 구분됨 */
   color: var(--md-primary);
-  border: 1.5px solid var(--md-outline);
+  border: 1.5px solid #B0ACAB;     /* 중성 회색 테두리 — 눈에 잘 띔 */
 }
 .btn-outline:hover {
   background: color-mix(in srgb, var(--md-primary) 8%, transparent);
@@ -338,7 +338,7 @@ body {
 .planner-item {
   display: flex;
   align-items: center;
-  background: #EDEAE8;  /* 저채도 고명도 — 비현재 아이템 덜 눈에 띄도록 */
+  background: #EFEEEE;  /* 저채도 고명도 — 비현재 아이템 덜 눈에 띄도록 */
   border-radius: var(--shape-lg);
   border: 1px solid var(--md-outline-variant);
   margin-bottom: 8px;
@@ -427,8 +427,8 @@ body {
   flex-shrink: 0;
 }
 .week-item {
-  background: #ECEAED;  /* 저채도 고명도 — 비현재 주간 아이템 */
-  border-color: #D6D4D8;
+  background: #EDEDEF;  /* 저채도 고명도 — 비현재 주간 아이템 */
+  border-color: #D6D5D8;
 }
 .week-item.is-today {
   border-color: var(--md-tertiary);
