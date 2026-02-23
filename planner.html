@@ -361,7 +361,7 @@ function buildTaskLines(block, taskDiv) {
       }
     });
 
-    autoResize(ta);
+    // autoResize는 DOM 삽입 후에 호출해야 scrollHeight가 정확히 측정됨
     line.appendChild(ta);
     container.appendChild(line);
   });
@@ -374,6 +374,8 @@ function rebuildTaskLines(block, taskDiv) {
   const next = buildTaskLines(block, taskDiv);
   if (old) taskDiv.replaceChild(next, old);
   else     taskDiv.appendChild(next);
+  // DOM에 삽입된 후 높이 재계산 — 저장된 텍스트가 잘리지 않도록
+  next.querySelectorAll('.task-line-text').forEach(autoResize);
 }
 
 function syncCheckToTask(block, ci, checked, taskDiv) {
