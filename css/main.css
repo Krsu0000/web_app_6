@@ -338,7 +338,7 @@ body {
 .planner-item {
   display: flex;
   align-items: center;
-  background: #EFEEEE;  /* 저채도 고명도 — 비현재 아이템 덜 눈에 띄도록 */
+  background: #F5F0EE;  /* 저채도 고명도 — 비현재 아이템 덜 눈에 띄도록 */
   border-radius: var(--shape-lg);
   border: 1px solid var(--md-outline-variant);
   margin-bottom: 8px;
@@ -427,7 +427,7 @@ body {
   flex-shrink: 0;
 }
 .week-item {
-  background: #EDEDEF;  /* 저채도 고명도 — 비현재 주간 아이템 */
+  background: #F3EEF2;  /* 저채도 고명도 — 비현재 주간 아이템 */
   border-color: #D6D5D8;
 }
 .week-item.is-today {
