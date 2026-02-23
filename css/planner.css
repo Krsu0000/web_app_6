@@ -305,9 +305,12 @@
   gap: 8px;
   padding: 3px 0;
 }
-/* 체크박스가 텍스트 첫 줄 높이에 광학적으로 맞도록 */
+/* 체크박스가 텍스트 첫 줄 높이에 광학적으로 맞도록
+   width: 100%를 auto로 덮어쓰지 않으면 check-label이
+   task-line 전체 너비를 차지해서 textarea가 안 보임 */
 .task-line .check-label {
   flex-shrink: 0;
+  width: auto;
   padding-top: 2px;
 }
 .task-line-text {
