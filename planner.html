@@ -696,7 +696,7 @@ function boot() {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/web_app_6/sw.js', { scope: '/web_app_6/' })
+    navigator.serviceWorker.register('/web_app_6/sw.js', { scope: '/web_app_6/', updateViaCache: 'none' })
       .then(reg => console.log('[SW] 등록 성공:', reg.scope))
       .catch(err => console.warn('[SW] 등록 실패:', err));
   });
