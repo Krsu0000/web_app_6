@@ -40,7 +40,7 @@
     <div class="planner-card">
       <div class="col-header">
         <span>#</span>
-        <span>시간</span>
+        <span></span>
         <span>할 일</span>
         <span>메모</span>
       </div>
@@ -640,13 +640,13 @@ function renderBlocks() {
     memoTA.value = block.memo;
     memoTA.addEventListener('input', () => { block.memo = memoTA.value; autoResize(memoTA); scheduleSave(); });
     memoDiv.appendChild(memoTA);
-    autoResize(memoTA);
+    // autoResize는 DOM 삽입 전에는 scrollHeight=0 → 루프 후 일괄 처리
 
     row.appendChild(numDiv);
     row.appendChild(timeDiv);
     row.appendChild(taskDiv);
     row.appendChild(memoDiv);
-    blocksWrap.appendChild(row);
+    blocksWrap.appendChild(row);  // ← 여기서야 DOM에 삽입됨
 
     attachDragEvents(row, blockIdx);
 
@@ -656,6 +656,10 @@ function renderBlocks() {
       }
     });
   });
+
+  // 모든 행이 DOM에 삽입된 후 textarea 높이 일괄 재계산
+  // (삽입 전에 호출하면 scrollHeight=0 → 텍스트 잘림 버그)
+  blocksWrap.querySelectorAll('.task-line-text, .memo-input').forEach(autoResize);
 }
 
 /* ════════════════════════════════════════════════════════════
