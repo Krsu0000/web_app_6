@@ -611,6 +611,7 @@ function renderCalc() {
         actualInput.type = 'number';
         actualInput.min = '0';
         actualInput.max = '99';
+        actualInput.inputMode = 'numeric';
         actualInput.className = 'calc-actual-input';
         const savedVal = weekData.actuals[text];
         actualInput.value = (savedVal !== undefined && savedVal !== null) ? savedVal : '';
@@ -624,6 +625,8 @@ function renderCalc() {
           }
           scheduleSave();
         });
+        // wrapper 클릭 시 input 포커스 전달 (클릭 영역 전체를 입력으로)
+        actualDiv.addEventListener('click', () => actualInput.focus());
         actualDiv.appendChild(actualInput);
         rowEl.appendChild(actualDiv);
       } else {

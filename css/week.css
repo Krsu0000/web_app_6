@@ -478,7 +478,9 @@
 }
 .calc-actual-input {
   width: 100%;
-  height: 100%;
+  /* height: 100% 대신 align-self: stretch — flex 컨테이너 안에서 높이 확장 */
+  align-self: stretch;
+  min-height: 26px;
   border: none;
   outline: none;
   background: transparent;
@@ -489,7 +491,7 @@
   text-align: center;
   cursor: text;
   font-variant-numeric: tabular-nums;
-  padding: 0;
+  padding: 0 2px;
   /* 숫자 스피너 제거 */
   -moz-appearance: textfield;
 }
