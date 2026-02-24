@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="6Block">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="css/main.css?v=11">
-  <link rel="stylesheet" href="css/planner.css?v=11">
-  <link rel="stylesheet" href="css/mobile.css?v=11">
+  <link rel="stylesheet" href="css/main.css?v=12">
+  <link rel="stylesheet" href="css/planner.css?v=12">
+  <link rel="stylesheet" href="css/mobile.css?v=12">
 </head>
 <body>
 
@@ -305,10 +305,10 @@ function commitTitle() {
 }
 
 /* ════════════════════════════════════════════════════════════
-   AUTO-RESIZE TEXTAREA
+   AUTO-RESIZE TEXTAREA (memo/footer 전용 — task는 CSS grow-wrap 사용)
 ════════════════════════════════════════════════════════════ */
 function autoResize(el) {
-  el.style.height = 'auto';
+  el.style.height = '0';
   el.style.height = el.scrollHeight + 'px';
 }
 
@@ -346,12 +346,16 @@ function buildTaskLines(block, taskDiv) {
     ta.className = 'task-line-text' + (block.checks[idx] ? ' done' : '');
     ta.value = taskObj.text;
     ta.rows = 1;
-    ta.cols = 1;   // intrinsic width 최소화 → Grid 1fr이 실제 폭 결정
     ta.placeholder = idx === 0 ? '할 일을 입력하세요...' : '';
+
+    // grow-wrap: CSS ::after 유령 요소가 textarea 내용 미러링 → CSS가 높이 자동 관리
+    const grow = document.createElement('span');
+    grow.className = 'task-line-grow';
+    grow.dataset.value = taskObj.text;
 
     ta.addEventListener('input', () => {
       taskObj.text = ta.value;
-      autoResize(ta);
+      grow.dataset.value = ta.value;   // ::after content 동기화 → 자동 높이 확장
       scheduleSave();
     });
     ta.addEventListener('keydown', e => {
@@ -362,8 +366,8 @@ function buildTaskLines(block, taskDiv) {
       }
     });
 
-    // autoResize는 DOM 삽입 후에 호출해야 scrollHeight가 정확히 측정됨
-    line.appendChild(ta);
+    grow.appendChild(ta);
+    line.appendChild(grow);
     container.appendChild(line);
   });
 
@@ -375,8 +379,7 @@ function rebuildTaskLines(block, taskDiv) {
   const next = buildTaskLines(block, taskDiv);
   if (old) taskDiv.replaceChild(next, old);
   else     taskDiv.appendChild(next);
-  // DOM에 삽입된 후 높이 재계산 — 저장된 텍스트가 잘리지 않도록
-  next.querySelectorAll('.task-line-text').forEach(autoResize);
+  // grow-wrap CSS가 높이를 자동 관리 — autoResize 불필요
 }
 
 function syncCheckToTask(block, ci, checked, taskDiv) {
@@ -619,13 +622,17 @@ function renderBlocks() {
 
     const timeDiv = document.createElement('div');
     timeDiv.className = 'block-time';
-    const timeInput = document.createElement('input');
+    const timeInput = document.createElement('textarea');
     timeInput.className = 'time-input';
-    timeInput.type = 'text';
+    timeInput.rows = 1;
+    timeInput.cols = 1;
     timeInput.placeholder = '';
-    timeInput.maxLength = 10;
     timeInput.value = block.timeLabel;
-    timeInput.addEventListener('input', () => { block.timeLabel = timeInput.value; scheduleSave(); });
+    timeInput.addEventListener('input', () => {
+      block.timeLabel = timeInput.value;
+      autoResize(timeInput);
+      scheduleSave();
+    });
     timeDiv.appendChild(timeInput);
 
     const taskDiv = document.createElement('div');
@@ -658,12 +665,9 @@ function renderBlocks() {
     });
   });
 
-  // 모든 행이 DOM에 삽입된 후, 두 번째 프레임에서 높이 일괄 재계산
-  // double rAF: 1차 프레임에서 Grid/레이아웃 확정 → 2차 프레임에서 scrollHeight 안정
+  // memo-input, time-input: autoResize — task-line-text는 CSS grow-wrap이 처리
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      blocksWrap.querySelectorAll('.task-line-text, .memo-input').forEach(autoResize);
-    });
+    blocksWrap.querySelectorAll('.memo-input, .time-input').forEach(autoResize);
   });
 }
 

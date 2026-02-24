@@ -223,7 +223,13 @@
   text-align: center;
   color: var(--md-on-surface-variant);
   font-family: inherit;
-  padding-top: 2px;
+  resize: none;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  min-height: 20px;
+  line-height: 1.5;
+  padding: 0;
 }
 .time-input::placeholder {
   color: var(--md-outline);
@@ -293,7 +299,7 @@
 /* ─── 할 일 셀 ───────────────────────────── */
 .block-task {
   position: relative;
-  min-width: 0;       /* 그리드 아이템이 셀 폭 이내로 축소되도록 */
+  min-width: 0;
 }
 
 .task-lines {
@@ -303,7 +309,6 @@
   width: 100%;
 }
 
-/* ★ CSS Grid으로 체크박스-textarea 폭 확정 (flex에서 변경) */
 .task-line {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -315,8 +320,31 @@
   width: auto;
   padding-top: 2px;
 }
+
+/* ★ CSS Grid 자동 높이 트릭 (grow-wrap):
+   ::after 유령 요소가 textarea 내용을 미러링 →
+   JS scrollHeight 계산 없이 CSS만으로 높이 자동 확장 */
+.task-line-grow {
+  display: grid;
+  min-height: 24px;
+}
+.task-line-grow::after {
+  content: attr(data-value) " ";
+  visibility: hidden;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  font-size: 14px;
+  font-weight: 400;
+  font-family: inherit;
+  line-height: 1.65;
+  padding: 0;
+  min-height: 24px;
+  grid-area: 1 / 1;
+}
 .task-line-text {
-  display: block;
+  grid-area: 1 / 1;
   width: 100%;
   min-width: 0;
   border: none;
