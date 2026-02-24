@@ -206,6 +206,7 @@ function createWeekPlanner(id) {
       Array.from({length:7}, () => ({ text: '', color: '' }))
     ),
     preChecks: defaultPreChecks(),
+    actuals: {},
     createdAt: now,
     updatedAt: now
   };
@@ -236,6 +237,7 @@ async function loadWeekPlanner() {
   if (localData) {
     if (!localData.preChecks || localData.preChecks.length === 0)
       localData.preChecks = defaultPreChecks();
+    if (!localData.actuals) localData.actuals = {};
     weekData = localData;
     rebuildColorMap();
     boot();
@@ -250,6 +252,7 @@ async function loadWeekPlanner() {
         const cloudData = doc.data();
         if (!cloudData.preChecks || cloudData.preChecks.length === 0)
           cloudData.preChecks = defaultPreChecks();
+        if (!cloudData.actuals) cloudData.actuals = {};
         const localUpdated = weekData ? new Date(weekData.updatedAt || 0) : new Date(0);
         const cloudUpdated = new Date(cloudData.updatedAt || 0);
         if (cloudUpdated > localUpdated) {
@@ -570,7 +573,7 @@ function renderCalc() {
   calcWrap.appendChild(subh);
 
   const entries = Object.entries(counts).sort((a,b) => b[1]-a[1]);
-  const rows = Math.ceil(entries.length / 2);
+  const rows = Math.max(Math.ceil(entries.length / 2), 2);
 
   const table = document.createElement('div');
   table.className = 'calc-table';
@@ -578,31 +581,65 @@ function renderCalc() {
   for (let r = 0; r < rows; r++) {
     const rowEl = document.createElement('div');
     rowEl.className = 'calc-row';
+
     for (let c = 0; c < 2; c++) {
       const idx = r * 2 + c;
       if (idx < entries.length) {
         const [text, count] = entries[idx];
         const bg = getColorForText(text);
-        rowEl.innerHTML += `
-          <div class="calc-item" style="background:${bg}">
-            <span class="calc-item-label">${escHtml(text)}</span>
-          </div>
-          <div class="calc-plan">${count}</div>
-          <div class="calc-actual"></div>
-        `;
+
+        // 항목 레이블
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'calc-item';
+        itemDiv.style.background = bg;
+        const label = document.createElement('span');
+        label.className = 'calc-item-label';
+        label.textContent = text;
+        itemDiv.appendChild(label);
+        rowEl.appendChild(itemDiv);
+
+        // 계획 수치
+        const planDiv = document.createElement('div');
+        planDiv.className = 'calc-plan';
+        planDiv.textContent = count;
+        rowEl.appendChild(planDiv);
+
+        // 실천 입력
+        const actualDiv = document.createElement('div');
+        actualDiv.className = 'calc-actual';
+        const actualInput = document.createElement('input');
+        actualInput.type = 'number';
+        actualInput.min = '0';
+        actualInput.max = '99';
+        actualInput.className = 'calc-actual-input';
+        const savedVal = weekData.actuals[text];
+        actualInput.value = (savedVal !== undefined && savedVal !== null) ? savedVal : '';
+        actualInput.placeholder = '-';
+        actualInput.addEventListener('change', () => {
+          const val = actualInput.value.trim();
+          if (val === '') {
+            delete weekData.actuals[text];
+          } else {
+            weekData.actuals[text] = parseInt(val, 10) || 0;
+          }
+          scheduleSave();
+        });
+        actualDiv.appendChild(actualInput);
+        rowEl.appendChild(actualDiv);
       } else {
-        rowEl.innerHTML += '<div class="calc-item empty"></div><div class="calc-plan"></div><div class="calc-actual"></div>';
+        // 빈 슬롯
+        const emptyItem = document.createElement('div');
+        emptyItem.className = 'calc-item empty';
+        rowEl.appendChild(emptyItem);
+        const emptyPlan = document.createElement('div');
+        emptyPlan.className = 'calc-plan';
+        rowEl.appendChild(emptyPlan);
+        const emptyActual = document.createElement('div');
+        emptyActual.className = 'calc-actual';
+        rowEl.appendChild(emptyActual);
       }
     }
     table.appendChild(rowEl);
-  }
-  if (rows < 2) {
-    for (let r = rows; r < 2; r++) {
-      const rowEl = document.createElement('div');
-      rowEl.className = 'calc-row';
-      rowEl.innerHTML = '<div class="calc-item empty"></div><div class="calc-plan"></div><div class="calc-actual"></div><div class="calc-item empty"></div><div class="calc-plan"></div><div class="calc-actual"></div>';
-      table.appendChild(rowEl);
-    }
   }
   calcWrap.appendChild(table);
 }

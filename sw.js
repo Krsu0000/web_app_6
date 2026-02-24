@@ -1,5 +1,5 @@
 // Service Worker for 블럭 식스 플래너 (6Block)
-const CACHE_NAME = '6block-v12';
+const CACHE_NAME = '6block-v13';
 
 // 캐시할 파일 목록 (앱 셸)
 const APP_SHELL = [
