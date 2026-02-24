@@ -633,6 +633,7 @@ function renderBlocks() {
       autoResize(timeInput);
       scheduleSave();
     });
+    timeDiv.addEventListener('click', () => timeInput.focus());
     timeDiv.appendChild(timeInput);
 
     const taskDiv = document.createElement('div');
