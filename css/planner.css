@@ -113,7 +113,7 @@
 /* M3 Surface Container 느낌 */
 .col-header {
   display: grid;
-  grid-template-columns: 44px 64px 1fr 1fr;
+  grid-template-columns: 44px 92px 1fr 0.62fr;
   background: var(--md-surface-2);
   border-bottom: 1px solid var(--md-outline-variant);
 }
@@ -132,7 +132,7 @@
 /* ─── 블럭 행 ───────────────────────────── */
 .block-row {
   display: grid;
-  grid-template-columns: 44px 64px 1fr 1fr;
+  grid-template-columns: 44px 92px 1fr 0.62fr;
   border-bottom: 1px solid var(--md-outline-variant);
   min-height: 92px;
   position: relative;
@@ -218,11 +218,11 @@
   border: none;
   outline: none;
   background: transparent;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 700;
   text-align: center;
   color: var(--md-on-surface-variant);
-  font-family: inherit;
+  font-family: var(--font-ui);   /* SUIT Variable 명시 */
   resize: none;
   overflow: hidden;
   overflow-wrap: break-word;

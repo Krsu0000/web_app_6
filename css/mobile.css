@@ -125,7 +125,7 @@
 /* ─── 태블릿 중간 사이즈 ─────────────── */
 @media (min-width: 601px) and (max-width: 768px) {
   .block-row {
-    grid-template-columns: 32px 52px 44px 1fr 1fr;
+    grid-template-columns: 32px 72px 44px 1fr 0.62fr;
   }
   .planner-page { padding: 20px 14px 64px; }
 }
